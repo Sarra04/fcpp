@@ -633,7 +633,7 @@ class deviation {
     result_type<U> result() const {
         if (m_count == 0) return {std::numeric_limits<T>::quiet_NaN()};
         T d2 = (m_sqsum*m_count-m_sum*m_sum)/m_count/m_count;
-        T d1 = sqrt(d2);
+        T d1 = d2 <= 0 ? 0 : sqrt(d2);
         if (std::isfinite(d1) and (d1+1)*(d1+1) <= d2) ++d1;
         return {d1};
     }
@@ -726,7 +726,7 @@ class stats {
     result_type<U> result() const {
         if (m_count == 0) return {std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()};
         T d2 = (m_sqsum*m_count-m_sum*m_sum)/m_count/m_count;
-        T d1 = sqrt(d2);
+        T d1 = d2 <= 0 ? 0 : sqrt(d2);
         if (std::isfinite(d1) and (d1+1)*(d1+1) <= d2) ++d1;
         return {m_sum/m_count, d1};
     }

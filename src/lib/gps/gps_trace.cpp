@@ -1,4 +1,7 @@
 #include "gps_trace.hpp"
+#include <cmath>
+
+#define EARTH_RADIUS 6371000.0
 
 namespace fcpp {
 
@@ -26,6 +29,8 @@ bool gps_trace::load_gpx_file(const std::string& src) {
     std::string content = buffer.str();
     file.close();
 
+    double ref_lat = 0.0, ref_lon = 0.0;
+
     try {
         rapidxml::xml_document<> doc;
         doc.parse<0>(&content[0]);
@@ -48,11 +53,17 @@ bool gps_trace::load_gpx_file(const std::string& src) {
                 rapidxml::xml_attribute<>* lon = trkpt_node->first_attribute("lon");
 
                 if (lat && lon) {
+                    double gps_lat = std::stod(lat->value());
+                    double gps_lon = std::stod(lon->value());
+
                     vec<2> pos;
+
                     if (track.empty()) {
+                        ref_lat = gps_lat;
+                        ref_lon = gps_lon;
                         pos = make_vec(0.0, 0.0);
                     } else {
-                        pos = coord_to_meters(std::stod(lat->value()), std::stod(lon->value()), track[0].lat, track[0].lon);
+                        pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
                     }
                     
                     trkpt point;
@@ -75,23 +86,21 @@ bool gps_trace::load_gpx_file(const std::string& src) {
 }
 
 void gps_trace::print_trkpt(trkpt t) {
-    std::cout << std::setprecision(17);
-    std::cout << t.lat << " - " << t.lon << std::endl;
+    std::cout << std::setprecision(3);
+    std::cout << "trkpt: {x: " << t.lat << " , y:" << t.lon << "}" << std::endl;
 }
 
 vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double ref_lon) {
-    const double EARTH_RADIUS = 6371000.0;
-
-    // todo: update PI with appropriate value
-    //calculates the distance between points
-    double d_lat = (lat * 3.14 / 180.0) - (ref_lat * 3.14 / 180.0);
-    double d_lon = (lon * 3.14 / 180.0) - (ref_lon * 3.14 / 180.0);
-
-    double x = EARTH_RADIUS * std::cos(ref_lat) * d_lon;
+    
+    double ref_lat_rad = ref_lat * M_PI / 180.0;
+    double d_lat = (lat- ref_lat) * M_PI / 180.0;
+    double d_lon = (lon - ref_lon) * M_PI / 180.0;
+    
+    // Project to meters
+    double x = EARTH_RADIUS * std::cos(ref_lat_rad) * d_lon;
     double y = EARTH_RADIUS * d_lat;
-
+    
     return make_vec(x, y);
 }
-
 }
 }

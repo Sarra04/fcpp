@@ -1,3 +1,3 @@
-D:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/gps_trace_test.dir
-D:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/ALL_BUILD.dir
-D:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/gps_trace_test.dir
+C:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps/build/CMakeFiles/ZERO_CHECK.dir

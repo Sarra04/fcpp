@@ -1,6 +1,6 @@
-^D:\DOCUMENTI SCUOLA\UNITO 2024-2025\AGGREGATEPROGRAMMING\FCPP-EXERCISES\FCPP\SRC\LIB\GPS\BUILD\CMAKEFILES\55529AC33A060A1396F883F03BC714F8\GENERATE.STAMP.RULE
+^C:\USERS\LOREF\DOCUMENTS\UNITO\TESI TRIENNALE\FCPP-EXERCISES\FCPP\SRC\LIB\GPS\BUILD\CMAKEFILES\9C0E81720CB7E2032DE2F1050D8B6A04\GENERATE.STAMP.RULE
 setlocal
-"C:\Program Files\CMake\bin\cmake.exe" "-SD:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps" "-BD:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "D:/Documenti scuola/Unito 2024-2025/AggregateProgramming/fcpp-exercises/fcpp/src/lib/gps/build/gps_trace_test.sln"
+"C:\Program Files\CMake\bin\cmake.exe" "-SC:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps" "-BC:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "C:/Users/loref/Documents/Unito/Tesi Triennale/fcpp-exercises/fcpp/src/lib/gps/build/gps_trace_test.sln"
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone

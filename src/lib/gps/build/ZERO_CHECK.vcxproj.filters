@@ -1,13 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <CustomBuild Include="D:\Documenti scuola\Unito 2024-2025\AggregateProgramming\fcpp-exercises\fcpp\src\lib\gps\build\CMakeFiles\55529ac33a060a1396f883f03bc714f8\generate.stamp.rule">
+    <CustomBuild Include="C:\Users\loref\Documents\Unito\Tesi Triennale\fcpp-exercises\fcpp\src\lib\gps\build\CMakeFiles\9c0e81720cb7e2032de2f1050d8b6a04\generate.stamp.rule">
       <Filter>CMake Rules</Filter>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="CMake Rules">
-      <UniqueIdentifier>{8A29D5FC-973B-3C33-A972-E4BCE2EE6B81}</UniqueIdentifier>
+      <UniqueIdentifier>{8942B17F-7F19-346D-A253-36D79287B01D}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

@@ -9,10 +9,12 @@
 #include <stdexcept>
 #include <iostream>
 #include <iomanip>
-#include "../data/vec.hpp"  // Updated to use the correct relative path
+#include <ctime>
+#include <cmath>
 
+#include "../data/vec.hpp"
 
-#include "rapidxml.hpp" // RapidXML header
+#include "rapidxml.hpp"
 
 
 /**
@@ -28,8 +30,9 @@ class gps_trace {
     public: // visible by net objects and the main program
         struct trkpt
         {
-            double lat;
-            double lon;
+            double x;
+            double y;
+            time_t timestamp;
 
             //todo: add timestamp management
             //todo: trkpt can also have elevation from <ele> child
@@ -40,8 +43,10 @@ class gps_trace {
          * @brief Main constructor.
          * 
          * @param src_gpx_file The src of the gpx file to load
+         * @param origin The origin of the gps track expressed in meters from poin (0, 0) where all track points will be mapped from.
+         * @param start_time Time offset from beginning of simulation expressed in seconds to map track points timestamps from.
          */
-        gps_trace(const std::string& src_gpx_file, const vec<2> origin);
+        gps_trace(const std::string& src_gpx_file, const vec<2> origin, const time_t start_time);
 
 
         /**
@@ -63,9 +68,15 @@ class gps_trace {
          */
         vec<2> coord_to_meters(double lat, double lon, double ref_lat, double ref_lon);
 
+        /**
+         * @brief convert time string from gpx file into time_t value
+         */
+        time_t parse_time_t(const std::string& iso_string);
+
     private:
         std::vector<trkpt> track;
         vec<2> origin;
+        time_t start_time;
 };
 
 }

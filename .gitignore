@@ -10,4 +10,3 @@ bazel-*
 _bazel_*
 node_net.md
 /src/lib/gps/build
-/src/lib/gps/build

@@ -1,5 +1,4 @@
 #include "gps_trace.hpp"
-#include <cmath>
 
 #define EARTH_RADIUS 6371000.0
 
@@ -7,9 +6,10 @@ namespace fcpp {
 
 namespace gps {
 
-gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin)
+gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin, const time_t start_time)
 {
     this->origin = origin;
+    this->start_time = start_time;
     if (!load_gpx_file(src_gpx_file))
     {
         std::cout << "gps_trace() - Error while opening the gpx file";
@@ -51,6 +51,7 @@ bool gps_trace::load_gpx_file(const std::string& src) {
 
                 rapidxml::xml_attribute<>* lat = trkpt_node->first_attribute("lat");
                 rapidxml::xml_attribute<>* lon = trkpt_node->first_attribute("lon");
+                rapidxml::xml_node<>* time_node = trkpt_node->first_node("time");
 
                 if (lat && lon) {
                     double gps_lat = std::stod(lat->value());
@@ -65,10 +66,13 @@ bool gps_trace::load_gpx_file(const std::string& src) {
                     } else {
                         pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
                     }
+
+                    pos += origin; //offset by given origin
                     
                     trkpt point;
-                    point.lat = pos[0];
-                    point.lon = pos[1];
+                    point.x = pos[0];
+                    point.y = pos[1];
+                    point.timestamp = parse_time_t(time_node->value());
 
                     track.push_back(point);
                     print_trkpt(point);
@@ -87,7 +91,7 @@ bool gps_trace::load_gpx_file(const std::string& src) {
 
 void gps_trace::print_trkpt(trkpt t) {
     std::cout << std::setprecision(3);
-    std::cout << "trkpt: {x: " << t.lat << " , y:" << t.lon << "}" << std::endl;
+    std::cout << "trkpt: {x: " << t.x << " , y:" << t.y << " , timestamp: " << t.timestamp << "}" << std::endl;
 }
 
 vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double ref_lon) {
@@ -101,6 +105,23 @@ vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double
     double y = EARTH_RADIUS * d_lat;
     
     return make_vec(x, y);
+}
+
+time_t gps_trace::parse_time_t(const std::string& iso_string) {
+    struct tm tm = {};
+    int year, month, day, hour, minute, second;
+    
+    sscanf(iso_string.c_str(), "%d-%d-%dT%d:%d:%d", 
+           &year, &month, &day, &hour, &minute, &second);
+    
+    tm.tm_year = year - 1900;
+    tm.tm_mon = month - 1;
+    tm.tm_mday = day;
+    tm.tm_hour = hour;
+    tm.tm_min = minute;
+    tm.tm_sec = second;
+    
+    return mktime(&tm);
 }
 }
 }

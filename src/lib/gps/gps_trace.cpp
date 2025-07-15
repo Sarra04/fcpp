@@ -30,6 +30,7 @@ bool gps_trace::load_gpx_file(const std::string& src) {
     file.close();
 
     double ref_lat = 0.0, ref_lon = 0.0;
+    time_t ref_time = 0.0;
 
     try {
         rapidxml::xml_document<> doc;
@@ -53,15 +54,16 @@ bool gps_trace::load_gpx_file(const std::string& src) {
                 rapidxml::xml_attribute<>* lon = trkpt_node->first_attribute("lon");
                 rapidxml::xml_node<>* time_node = trkpt_node->first_node("time");
 
-                if (lat && lon) {
+                if (lat && lon && time_node) {
                     double gps_lat = std::stod(lat->value());
                     double gps_lon = std::stod(lon->value());
 
                     vec<2> pos;
 
-                    if (track.empty()) {
+                    if (track.empty()) { //first node entered
                         ref_lat = gps_lat;
                         ref_lon = gps_lon;
+                        ref_time = parse_time_t(time_node->value());
                         pos = make_vec(0.0, 0.0);
                     } else {
                         pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
@@ -72,7 +74,7 @@ bool gps_trace::load_gpx_file(const std::string& src) {
                     trkpt point;
                     point.x = pos[0];
                     point.y = pos[1];
-                    point.timestamp = parse_time_t(time_node->value());
+                    point.timestamp = parse_time_t(time_node->value()) - ref_time + start_time;
 
                     track.push_back(point);
                     print_trkpt(point);
@@ -95,12 +97,10 @@ void gps_trace::print_trkpt(trkpt t) {
 }
 
 vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double ref_lon) {
-    
     double ref_lat_rad = ref_lat * M_PI / 180.0;
     double d_lat = (lat- ref_lat) * M_PI / 180.0;
     double d_lon = (lon - ref_lon) * M_PI / 180.0;
     
-    // Project to meters
     double x = EARTH_RADIUS * std::cos(ref_lat_rad) * d_lon;
     double y = EARTH_RADIUS * d_lat;
     

@@ -16,6 +16,7 @@
 #include <cmath>
 
 #include "lib/data/vec.hpp"
+#include "lib/component/timer.hpp"
 #include "lib/internal/trace.hpp"
 
 #include "../../external/rapidxml-1.13/rapidxml.hpp"
@@ -38,7 +39,6 @@ class gps_trace {
             double y;
             time_t timestamp;
 
-            //todo: add timestamp management
             //todo: trkpt can also have elevation from <ele> child
         };
 
@@ -79,7 +79,39 @@ class gps_trace {
 
         template <typename node_t>
         void follow_track(node_t& node, trace_t call_point) {
-            node.velocity() = make_vec(3, 0.0);
+            trkpt target = next_point(node.current_time());
+            vec<2> direction = make_vec(target.x, target.y) - node.position();
+
+            //calculate magnitude (distance)
+            double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
+
+            if(distance == 0) {
+                node.velocity() = make_vec(0.0, 0.0);
+                return;
+            }
+
+            //normalize direction vector
+            direction /= distance; 
+
+            double time_left = target.timestamp - (node.current_time());
+            double next_time_step = node.next_time() - node.current_time();
+
+            double velocity;
+            if(time_left > next_time_step) {
+                velocity = distance / time_left;
+            } else {
+                velocity = distance / next_time_step;
+            }
+
+            node.velocity() = direction * velocity;
+        }
+
+        trkpt next_point(time_t time) {
+            int i = 0;
+            while(time > track[i].timestamp && i < track.size()) {
+                i++;
+            }
+            return track[i];
         }
 
     private:
@@ -87,7 +119,6 @@ class gps_trace {
         vec<2> origin;
         time_t start_time;
 };
-
 }
 }
 

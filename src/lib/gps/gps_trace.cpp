@@ -10,17 +10,15 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin, const
 {
     this->origin = origin;
     this->start_time = start_time;
-    if (!load_gpx_file(src_gpx_file))
-    {
-        std::cout << "gps_trace() - Error while opening the gpx file";
+    if (!load_gpx_file(src_gpx_file)) {
+        throw std::runtime_error("Failed to load GPX file: " + src_gpx_file);
     }
 };
 
 bool gps_trace::load_gpx_file(const std::string& src) {
     std::ifstream file(src);
     if (!file.is_open()) {
-        std::cout << "load_gpx_file() - Failed to open file";
-        return false; // Failed to open file
+        throw std::runtime_error("Failed to open GPX file: " + src);
     }
 
     // Save file to string stream for processing
@@ -83,9 +81,9 @@ bool gps_trace::load_gpx_file(const std::string& src) {
         }
 
     } catch (const rapidxml::parse_error& e) {
-        return false;
+        throw std::runtime_error("Error while parsing GPX file");
     } catch (const std::exception& e) {
-        return false;
+        throw std::runtime_error("Exeption while reading GPX file");
     }
 
     return !track.empty(); // Return true if at least one point was loaded

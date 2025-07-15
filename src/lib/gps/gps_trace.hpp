@@ -1,4 +1,7 @@
 
+#ifndef GPS_TRACE_HPP
+#define GPS_TRACE_HPP
+
 #define _USE_MATH_DEFINES
 #include <cmath>
 
@@ -12,9 +15,10 @@
 #include <ctime>
 #include <cmath>
 
-#include "../data/vec.hpp"
+#include "lib/data/vec.hpp"
+#include "lib/internal/trace.hpp"
 
-#include "rapidxml.hpp"
+#include "../../external/rapidxml-1.13/rapidxml.hpp"
 
 
 /**
@@ -73,6 +77,11 @@ class gps_trace {
          */
         time_t parse_time_t(const std::string& iso_string);
 
+        template <typename node_t>
+        void follow_track(node_t& node, trace_t call_point) {
+            node.velocity() = make_vec(3, 0.0);
+        }
+
     private:
         std::vector<trkpt> track;
         vec<2> origin;
@@ -81,3 +90,5 @@ class gps_trace {
 
 }
 }
+
+#endif // GPS_TRACE_HPP

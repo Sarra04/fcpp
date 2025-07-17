@@ -82,18 +82,22 @@ class gps_trace {
          * @brief get the next track point to follow based on the given timestamp
          * @param time current time
          */
-        trkpt next_point(time_t time);
+        trkpt next_point(fcpp::times_t time);
 
         template <typename node_t>
         void follow_track(node_t& node, trace_t call_point) {
             if(node.uid != owner_node_uid) { return; }
             trkpt target = next_point(node.current_time());
+
+            //std::cout << node.current_time() << "s target is at x: " << target.x << " y: " << target.y << std::endl;
+
             vec<2> direction = make_vec(target.x, target.y) - node.position();
 
             //calculate magnitude (distance)
             double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
 
             if(distance == 0) {
+                std::cout << "arrived at a track point @ " << node.current_time() << std::endl;
                 node.velocity() = make_vec(0.0, 0.0);
                 return;
             }

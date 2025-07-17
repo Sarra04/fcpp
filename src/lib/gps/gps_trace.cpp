@@ -123,12 +123,21 @@ time_t gps_trace::parse_time_t(const std::string& string) {
     return mktime(&tm);
 }
 
-gps_trace::trkpt gps_trace::next_point(time_t time) {
+gps_trace::trkpt gps_trace::next_point(fcpp::times_t time) {
     int i = 0;
+    std::stringstream ss;
     while(time > track[i].timestamp && i < track.size()) {
         i++;
     }
-    return track[i];
+
+    ss << time << " > " << track[i].timestamp << " = " << (time > track[i].timestamp) << std::endl;
+    std::cout << ss.str();
+
+    if(i < track.size()) {
+        return track[i];
+    } else {
+        return track[track.size() - 1];
+    }
 }
 
 }

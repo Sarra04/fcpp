@@ -47,34 +47,40 @@ class gps_trace {
          * @brief Main constructor.
          * 
          * @param src_gpx_file The src of the gpx file to load
-         * @param origin The origin of the gps track expressed in meters from poin (0, 0) where all track points will be mapped from.
-         * @param start_time Time offset from beginning of simulation expressed in seconds to map track points timestamps from.
+         * @param ref_lat Reference latitude to be mapped in x:0
+         * @param ref_lon Reference longitude to be mapped in y:0
+         * @param ref_time Time offset for track timestamps.
          * @param uid Uid of the node that will follow the track.
          */
-        gps_trace(const std::string& src_gpx_file, const vec<2> origin, const time_t start_time, const device_t uid);
+        gps_trace(const std::string& src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time, const device_t uid);
 
 
         /**
-         * @brief Load and read a gpx file
+         * @brief Load a gpx file
          * 
          * @param src The src of the gpx file to load
+         * @param ref_lat Reference latitude to be mapped in x:0
+         * @param ref_lon Reference longitude to be mapped in y:0
+         * @param ref_time Time offset for track timestamps.
          */
-        bool load_gpx_file(const std::string& src);
+        bool load_gpx_file(const std::string& src, const double ref_lat, const double ref_lon, const time_t ref_time);
 
 
         /**
          * @brief print a trkpt lat and lon in the console
+         * @param t the trkpt to be printed
          */
         void print_trkpt(trkpt t);
 
 
         /**
-         * @brief Haversine formula to convert lat/lon to meters
+         * @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection
          */
         vec<2> coord_to_meters(double lat, double lon, double ref_lat, double ref_lon);
 
         /**
          * @brief convert time string from gpx file into time_t value
+         * @param string timestamp given in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
          */
         time_t parse_time_t(const std::string& string);
 
@@ -86,10 +92,8 @@ class gps_trace {
 
         template <typename node_t>
         void follow_track(node_t& node, trace_t call_point) {
-            if(node.uid != owner_node_uid) { return; }
+            if(node.uid != owner_uid) { return; }
             trkpt target = next_point(node.current_time());
-
-            //std::cout << node.current_time() << "s target is at x: " << target.x << " y: " << target.y << std::endl;
 
             vec<2> direction = make_vec(target.x, target.y) - node.position();
 
@@ -119,9 +123,7 @@ class gps_trace {
         }
     private:
         std::vector<trkpt> track;
-        vec<2> origin;
-        time_t start_time;
-        device_t owner_node_uid;
+        device_t owner_uid;
 };
 }
 }

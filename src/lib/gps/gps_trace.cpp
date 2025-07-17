@@ -6,17 +6,15 @@ namespace fcpp {
 
 namespace gps {
 
-gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin, const time_t start_time, const device_t uid)
+gps_trace::gps_trace(const std::string& src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time, const device_t owner_uid)
 {
-    this->origin = origin;
-    this->start_time = start_time;
-    this->owner_node_uid = uid;
-    if (!load_gpx_file(src_gpx_file)) {
+    this->owner_uid = owner_uid;
+    if (!load_gpx_file(src_gpx_file, ref_lat, ref_lon, ref_time)) {
         throw std::runtime_error("Failed to load GPX file: " + src_gpx_file);
     }
 };
 
-bool gps_trace::load_gpx_file(const std::string& src) {
+bool gps_trace::load_gpx_file(const std::string& src, const double ref_lat, const double ref_lon, const time_t ref_time) {
     std::ifstream file(src);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open GPX file: " + src);
@@ -28,8 +26,7 @@ bool gps_trace::load_gpx_file(const std::string& src) {
     std::string content = buffer.str();
     file.close();
 
-    double ref_lat = 0.0, ref_lon = 0.0;
-    time_t ref_time = 0.0;
+    time_t start_time = 0.0;
 
     try {
         rapidxml::xml_document<> doc;
@@ -60,20 +57,15 @@ bool gps_trace::load_gpx_file(const std::string& src) {
                     vec<2> pos;
 
                     if (track.empty()) { //first node entered
-                        ref_lat = gps_lat;
-                        ref_lon = gps_lon;
-                        ref_time = parse_time_t(time_node->value());
-                        pos = make_vec(0.0, 0.0);
-                    } else {
-                        pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
+                        start_time = parse_time_t(time_node->value());
                     }
 
-                    pos += origin; //offset by given origin
+                    pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
                     
                     trkpt point;
                     point.x = pos[0];
                     point.y = pos[1];
-                    point.timestamp = parse_time_t(time_node->value()) - ref_time + start_time;
+                    point.timestamp = parse_time_t(time_node->value()) - start_time + ref_time;
 
                     track.push_back(point);
                     print_trkpt(point);
@@ -125,13 +117,10 @@ time_t gps_trace::parse_time_t(const std::string& string) {
 
 gps_trace::trkpt gps_trace::next_point(fcpp::times_t time) {
     int i = 0;
-    std::stringstream ss;
+    
     while(time > track[i].timestamp && i < track.size()) {
         i++;
     }
-
-    ss << time << " > " << track[i].timestamp << " = " << (time > track[i].timestamp) << std::endl;
-    std::cout << ss.str();
 
     if(i < track.size()) {
         return track[i];

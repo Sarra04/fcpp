@@ -49,8 +49,9 @@ class gps_trace {
          * @param src_gpx_file The src of the gpx file to load
          * @param origin The origin of the gps track expressed in meters from poin (0, 0) where all track points will be mapped from.
          * @param start_time Time offset from beginning of simulation expressed in seconds to map track points timestamps from.
+         * @param uid Uid of the node that will follow the track.
          */
-        gps_trace(const std::string& src_gpx_file, const vec<2> origin, const time_t start_time);
+        gps_trace(const std::string& src_gpx_file, const vec<2> origin, const time_t start_time, const device_t uid);
 
 
         /**
@@ -75,10 +76,17 @@ class gps_trace {
         /**
          * @brief convert time string from gpx file into time_t value
          */
-        time_t parse_time_t(const std::string& iso_string);
+        time_t parse_time_t(const std::string& string);
+
+        /**
+         * @brief get the next track point to follow based on the given timestamp
+         * @param time current time
+         */
+        trkpt next_point(time_t time);
 
         template <typename node_t>
         void follow_track(node_t& node, trace_t call_point) {
+            if(node.uid != owner_node_uid) { return; }
             trkpt target = next_point(node.current_time());
             vec<2> direction = make_vec(target.x, target.y) - node.position();
 
@@ -93,7 +101,7 @@ class gps_trace {
             //normalize direction vector
             direction /= distance; 
 
-            double time_left = target.timestamp - (node.current_time());
+            double time_left = target.timestamp - node.current_time();
             double next_time_step = node.next_time() - node.current_time();
 
             double velocity;
@@ -105,19 +113,11 @@ class gps_trace {
 
             node.velocity() = direction * velocity;
         }
-
-        trkpt next_point(time_t time) {
-            int i = 0;
-            while(time > track[i].timestamp && i < track.size()) {
-                i++;
-            }
-            return track[i];
-        }
-
     private:
         std::vector<trkpt> track;
         vec<2> origin;
         time_t start_time;
+        device_t owner_node_uid;
 };
 }
 }

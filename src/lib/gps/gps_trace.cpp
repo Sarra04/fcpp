@@ -6,10 +6,11 @@ namespace fcpp {
 
 namespace gps {
 
-gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin, const time_t start_time)
+gps_trace::gps_trace(const std::string &src_gpx_file, const vec<2> origin, const time_t start_time, const device_t uid)
 {
     this->origin = origin;
     this->start_time = start_time;
+    this->owner_node_uid = uid;
     if (!load_gpx_file(src_gpx_file)) {
         throw std::runtime_error("Failed to load GPX file: " + src_gpx_file);
     }
@@ -105,11 +106,11 @@ vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double
     return make_vec(x, y);
 }
 
-time_t gps_trace::parse_time_t(const std::string& iso_string) {
+time_t gps_trace::parse_time_t(const std::string& string) {
     struct tm tm = {};
     int year, month, day, hour, minute, second;
     
-    sscanf(iso_string.c_str(), "%d-%d-%dT%d:%d:%d", 
+    sscanf(string.c_str(), "%d-%d-%dT%d:%d:%d", 
            &year, &month, &day, &hour, &minute, &second);
     
     tm.tm_year = year - 1900;
@@ -121,5 +122,14 @@ time_t gps_trace::parse_time_t(const std::string& iso_string) {
     
     return mktime(&tm);
 }
+
+gps_trace::trkpt gps_trace::next_point(time_t time) {
+    int i = 0;
+    while(time > track[i].timestamp && i < track.size()) {
+        i++;
+    }
+    return track[i];
+}
+
 }
 }

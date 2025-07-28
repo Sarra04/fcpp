@@ -4,8 +4,6 @@
 
 namespace fcpp {
 
-namespace gps {
-
 gps_trace::gps_trace(const std::string& src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time, const device_t owner_uid)
 {
     this->owner_uid = owner_uid;
@@ -127,7 +125,5 @@ gps_trace::trkpt gps_trace::next_point(fcpp::times_t time) {
     } else {
         return track[track.size() - 1];
     }
-}
-
 }
 }

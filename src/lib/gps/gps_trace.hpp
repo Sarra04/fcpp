@@ -26,8 +26,6 @@
  * @brief Namespace containing all the objects in the FCPP library.
  */
 namespace fcpp {
-
-namespace gps {
 /**
  * @brief Class handling
  */
@@ -75,6 +73,10 @@ class gps_trace {
 
         /**
          * @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection
+         * @param lat latitude value to convert
+         * @param lon longitude value to convert
+         * @param ref_lat reference latitude mapped at in x:0
+         * @param ref_lon reference longitude mapped at in y:0
          */
         vec<2> coord_to_meters(double lat, double lon, double ref_lat, double ref_lon);
 
@@ -101,7 +103,6 @@ class gps_trace {
             double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
 
             if(distance == 0) {
-                std::cout << "arrived at a track point @ " << node.current_time() << std::endl;
                 node.velocity() = make_vec(0.0, 0.0);
                 return;
             }
@@ -125,7 +126,6 @@ class gps_trace {
         std::vector<trkpt> track;
         device_t owner_uid;
 };
-}
 }
 
 #endif // GPS_TRACE_HPP

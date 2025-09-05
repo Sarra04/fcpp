@@ -198,7 +198,7 @@ set(
     lib/simulation/simulated_map.cpp
     lib/simulation/simulated_positioner.cpp
     lib/simulation/spawner.cpp
-    lib/gps/gps_trace.cpp
+    lib/simulation/gps_trace.cpp
 )
 if(FCPP_BUILD_GL)
     list(

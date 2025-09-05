@@ -4,18 +4,11 @@
 
 namespace fcpp {
 
-gps_trace::gps_trace(const std::string& src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time, const device_t owner_uid)
+gps_trace::gps_trace(const std::string& src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time, const device_t owner_id)
 {
-    this->owner_uid = owner_uid;
-    if (!load_gpx_file(src_gpx_file, ref_lat, ref_lon, ref_time)) {
-        throw std::runtime_error("Failed to load GPX file: " + src_gpx_file);
-    }
-};
-
-bool gps_trace::load_gpx_file(const std::string& src, const double ref_lat, const double ref_lon, const time_t ref_time) {
-    std::ifstream file(src);
+    std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open GPX file: " + src);
+        throw std::runtime_error("Failed to open GPX file: " + src_gpx_file);
     }
 
     // Save file to string stream for processing
@@ -25,6 +18,8 @@ bool gps_trace::load_gpx_file(const std::string& src, const double ref_lat, cons
     file.close();
 
     time_t start_time = 0.0;
+
+    auto track = tracks[owner_id];
 
     try {
         rapidxml::xml_document<> doc;
@@ -60,29 +55,31 @@ bool gps_trace::load_gpx_file(const std::string& src, const double ref_lat, cons
 
                     pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
                     
-                    trkpt point;
+                    track_point point;
                     point.x = pos[0];
                     point.y = pos[1];
                     point.timestamp = parse_time_t(time_node->value()) - start_time + ref_time;
 
                     track.push_back(point);
-                    print_trkpt(point);
+                    
+                    //print_track_point(point);
                 }
             }
         }
+
+        std::reverse(track.begin(), track.end());
 
     } catch (const rapidxml::parse_error& e) {
         throw std::runtime_error("Error while parsing GPX file");
     } catch (const std::exception& e) {
         throw std::runtime_error("Exeption while reading GPX file");
     }
+};
 
-    return !track.empty(); // Return true if at least one point was loaded
-}
 
-void gps_trace::print_trkpt(trkpt t) {
+void gps_trace::print_track_point(track_point t) {
     std::cout << std::setprecision(3);
-    std::cout << "trkpt: {x: " << t.x << " , y:" << t.y << " , timestamp: " << t.timestamp << "}" << std::endl;
+    std::cout << "track_point: {x: " << t.x << " , y:" << t.y << " , timestamp: " << t.timestamp << "}" << std::endl;
 }
 
 vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double ref_lon) {
@@ -113,17 +110,28 @@ time_t gps_trace::parse_time_t(const std::string& string) {
     return mktime(&tm);
 }
 
-gps_trace::trkpt gps_trace::next_point(fcpp::times_t time) {
-    int i = 0;
+gps_trace::trkpt gps_trace::next_point(fcpp::times_t time, device_t node_uid) {
+    auto it = tracks.find(node_uid);
     
-    while(time > track[i].timestamp && i < track.size()) {
-        i++;
+    if (it == tracks.end()) {
+        return nullptr; // No track found for the current node
     }
 
-    if(i < track.size()) {
-        return track[i];
-    } else {
-        return track[track.size() - 1];
+    auto& track = it->second;
+
+    while (track.size() > 1) {
+        auto& t = track.back();
+        
+        if (t.timestamp < time) {
+            track.pop_back();
+        } else {
+            return &t;
+        }
     }
+
+    // In case there's no more track_points, return the last one or nullptr if empty.
+    return track.empty() ? nullptr : &track[0];
+}
+    
 }
 }

@@ -14,6 +14,7 @@
 #include <iomanip>
 #include <ctime>
 #include <cmath>
+#include <algorithm>
 
 #include "lib/data/vec.hpp"
 #include "lib/component/timer.hpp"
@@ -31,7 +32,7 @@ namespace fcpp {
  */
 class gps_trace {
     public: // visible by net objects and the main program
-        struct trkpt
+        struct track_point
         {
             double x;
             double y;
@@ -65,10 +66,10 @@ class gps_trace {
 
 
         /**
-         * @brief print a trkpt lat and lon in the console
-         * @param t the trkpt to be printed
+         * @brief print a track_point lat and lon in the console
+         * @param t the track_point to be printed
          */
-        void print_trkpt(trkpt t);
+        void print_track_point(track_point t);
 
 
         /**
@@ -90,12 +91,12 @@ class gps_trace {
          * @brief get the next track point to follow based on the given timestamp
          * @param time current time
          */
-        trkpt next_point(fcpp::times_t time);
+        trkpt next_point(fcpp::times_t time, device_t node_uid);
 
         template <typename node_t>
         void follow_track(node_t& node, trace_t call_point) {
-            if(node.uid != owner_uid) { return; }
-            trkpt target = next_point(node.current_time());
+            track_point target = next_point(node.current_time(), node.uid);
+
 
             vec<2> direction = make_vec(target.x, target.y) - node.position();
 
@@ -123,8 +124,7 @@ class gps_trace {
             node.velocity() = direction * velocity;
         }
     private:
-        std::vector<trkpt> track;
-        device_t owner_uid;
+        std::map<device_t, std::vector<track_point>> tracks;
 };
 }
 

@@ -17,6 +17,7 @@
 #include "lib/simulation/simulated_positioner.hpp"
 #include "lib/simulation/simulated_map.hpp"
 #include "lib/simulation/spawner.hpp"
+#include "lib/simulation/gps_trace.hpp"
 
 
 /**

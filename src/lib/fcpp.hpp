@@ -39,6 +39,5 @@
 #include "lib/option.hpp"
 #include "lib/settings.hpp"
 #include "lib/simulation.hpp"
-#include "lib/gps/gps_trace.hpp"
 
 #endif // FCPP_FCPP_H_

@@ -130,13 +130,7 @@ namespace fcpp
         return mktime(&tm);
     }
 
-    gps_trace::track_point gps_trace::next_point(std::vector<track_point> track, fcpp::times_t time)
-    {
-
-        if(tracks.empty()) {
-            throw std::runtime_error("Given GPS track is empty.");
-        }
-
+    gps_trace::track_point gps_trace::next_point(std::vector<track_point>& track, fcpp::times_t time) {
         while (track.size() > 1)
         {
             auto t = track.back();

@@ -82,7 +82,7 @@ public: // visible by net objects and the main program
      * @brief get the next track point to follow based on the given timestamp
      * @param time current time
      */
-    track_point next_point(std::vector<track_point> track, fcpp::times_t time);
+    track_point next_point(std::vector<track_point>& track, fcpp::times_t time);
 
 
     template <typename node_t>
@@ -90,7 +90,10 @@ public: // visible by net objects and the main program
     {
         auto t = tracks.find(node.uid);
         if (t == tracks.end()) { return false; /* No track found for the current node */ }
-        auto track = t->second;
+
+        auto& track = t->second;
+
+        if (track.empty()) { return false; }
 
         track_point target = next_point(track, node.current_time());
 
@@ -98,12 +101,6 @@ public: // visible by net objects and the main program
 
         // calculate magnitude (distance)
         double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
-
-        if (distance == 0) // TOGLIERE
-        {
-            node.velocity() = make_vec(0.0, 0.0);
-            return true;
-        }
 
         // normalize direction vector
         direction /= distance;
@@ -122,6 +119,7 @@ public: // visible by net objects and the main program
         }
 
         node.velocity() = direction * velocity;
+
         return true;
     }
 

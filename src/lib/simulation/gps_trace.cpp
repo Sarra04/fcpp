@@ -7,6 +7,7 @@ namespace fcpp
 
     gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time)
     {
+        std::cout << "gps_trace constructor - 1" << std::endl;
         std::ifstream file(src_gpx_file);
         if (!file.is_open())
         {

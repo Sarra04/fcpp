@@ -35,13 +35,16 @@ namespace fcpp
 class gps_trace
 {
 public: // visible by net objects and the main program
-    struct track_point // SPOSTARE FUORI
+    struct track_point
     {
         double x;
         double y;
-        time_t timestamp;
+        times_t timestamp;
+    };
 
-        // todo: trkpt can also have elevation from <ele> child
+    struct track_data {
+        std::vector<track_point> track;
+        int index;
     };
 
     gps_trace() = default;
@@ -58,12 +61,6 @@ public: // visible by net objects and the main program
     gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time);
 
     /**
-     * @brief print a track_point lat and lon in the console
-     * @param t the track_point to be printed
-     */
-    void print_track_point(track_point t); // operator<<
-
-    /**
      * @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection
      * @param lat latitude value to convert
      * @param lon longitude value to convert
@@ -76,26 +73,26 @@ public: // visible by net objects and the main program
      * @brief convert time string from gpx file into time_t value
      * @param string timestamp given in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
      */
-    time_t parse_time_t(const std::string &string); // private static
+    times_t parse_times_t(const std::string &string); // private static
 
     /**
      * @brief get the next track point to follow based on the given timestamp
      * @param time current time
      */
-    track_point next_point(std::vector<track_point>& track, fcpp::times_t time);
+    track_point next_point(track_data& td, fcpp::times_t time);
 
 
     template <typename node_t>
-    bool follow_track(node_t &node, trace_t call_point)
-    {
+    bool follow_track(node_t &node, trace_t call_point) {
         auto t = tracks.find(node.uid);
+
         if (t == tracks.end()) { return false; /* No track found for the current node */ }
 
-        auto& track = t->second;
+        track_data& td = t->second;
 
-        if (track.empty()) { return false; }
+        if (td.index >= td.track.size() - 1) { return false; }
 
-        track_point target = next_point(track, node.current_time());
+        track_point target = next_point(td, node.current_time());
 
         vec<2> direction = make_vec(target.x, target.y) - node.position();
 
@@ -128,7 +125,7 @@ public: // visible by net objects and the main program
     }
 
 private:
-    std::unordered_map<device_t, std::vector<track_point>> tracks;
+    std::unordered_map<device_t, track_data> tracks;
 };
 
 

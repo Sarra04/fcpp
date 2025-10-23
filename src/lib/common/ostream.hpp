@@ -140,6 +140,8 @@ namespace details {
 }
 
 namespace common {
+    template <typename T, int enable>
+    class option;
     template <typename T, typename... Ts>
     class multitype_map;
     template <typename K, typename T, typename H, typename P, typename A>
@@ -502,6 +504,18 @@ namespace fcpp {
 
     //! @brief Namespace containing objects of common use.
     namespace common {
+        //! @brief Printing optional values.
+        template <typename O, typename T, int enable, typename = if_ostream<O>>
+        O& operator<<(O& o, option<T, enable> const& v) {
+            return fcpp::details::iterable_print(o, "()", v);
+        }
+
+        //! @brief Converting optional values to strings.
+        template <typename T, int enable, typename = fcpp::details::if_stringable<T>>
+        std::string to_string(option<T, enable> const& v) {
+            return fcpp::details::iterable_stringify("()", v);
+        }
+
         //! @brief Printing multitype maps in arrowhead format.
         template <typename O, typename T, typename... Ts, typename = if_ostream<O>>
         O& operator<<(O& o, multitype_map<T, Ts...> const& m) {

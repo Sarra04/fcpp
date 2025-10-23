@@ -87,6 +87,50 @@ picture plot(real endx = 0, string ppath, string title, string xlabel, string yl
     picture pic;
     unitsize(pic, 1cm);
 
+    // improve names
+    string[] suffix_patterns = {" (", "-"};
+    string[] suffix_appends  = {"",   ")"};
+    string append_suffix;
+    int common_suffix = 0;
+    for (int j=0; j<suffix_patterns.length; ++j) {
+        common_suffix = rfind(names[0], suffix_patterns[j]);
+        append_suffix = suffix_appends[j];
+        if (common_suffix > 0) {
+            string suffix = substr(names[0], common_suffix);
+            common_suffix = length(names[0]) - common_suffix;
+            for (int i=1; i<names.length; ++i)
+                if (substr(names[i], length(names[i])-common_suffix) != suffix) {
+                    common_suffix = 0;
+                    break;
+                }
+        }
+        if (common_suffix > 0) break;
+    }
+    for (int i=0; i<names.length; ++i) {
+        if (common_suffix > 0) {
+            names[i] = substr(names[i], 0, length(names[i])-common_suffix) + append_suffix;
+        }
+        for (int j=0; j<10; ++j)
+            names[i] = replace(names[i], "<"+string(j)+">", " "+string(j));
+        names[i] = replace(replace(names[i], "<", " ("), ">", ")");
+        if (find(names[i], "  ") >= 0)
+            names[i] = replace(names[i], "  ", " (") + ")";
+    }
+
+    if (length(title) > 0)
+        label(pic, scale(0.6)*replace(title, "%", "\%"), (DIM.x/2+0.55,DIM.y+0.7));
+
+    Label adapt_label(string text, real maxscale, real maxlength, pair align = (0,0)) {
+        picture pp;
+        unitsize(pp, 1cm);
+        label(pp, scale(maxscale)*text, (0,0));
+        real len = size(pp, true).x;
+        if (len > maxlength) maxscale *= maxlength / len;
+        if (align != E) text = "\phantom{pd}" + text;
+        if (align != W) text = text + "\phantom{pd}";
+        return scale(maxscale) * text;
+    }
+
     // scan points for min-max x and y values
     real bminx = inf, bminy = inf, bmaxx = -inf, bmaxy = -inf;
     real[] valy = {}, sumy = {0}, sqsumy = {0};
@@ -99,13 +143,25 @@ picture plot(real endx = 0, string ppath, string title, string xlabel, string yl
             valy.push(values[i][j].y);
         }
     }
-    if (bmaxx < bminx) {
-        bminx = bminy = 0;
-        bmaxx = bmaxy = 1;
-    }
-    if (bminx == bmaxx) {
-        bminx = bminx - 0.5;
-        bmaxx = bmaxx + 0.5;
+    if (bmaxx <= bminx) {
+        draw(pic, (0,0) -- (0,DIM.y) -- (DIM.x+1.0,DIM.y) -- (DIM.x+1.0,0) -- cycle, mediumgrey);
+        draw(pic, ((DIM.x+1.0)*0.5,0) -- ((DIM.x+1.0)*0.5,DIM.y), mediumgrey);
+        if (length(xlabel) > 0)
+            label(pic, scale(0.5)*("\textit{"+xlabel+"}"), ((DIM.x+1)*0.25,-0.15));
+        if (length(ylabel) > 0)
+            label(pic, scale(0.5)*("\textit{"+ylabel+"}"), ((DIM.x+1)*0.75,-0.15));
+        for (int i=0; i<names.length; ++i) {
+            label(pic, adapt_label(names[i], 0.5, DIM.x/2 - 0.4, E), (0.2, DIM.y*(names.length-i-0.5)/names.length), align=E);
+            draw(pic, (0,DIM.y*i/names.length) -- (DIM.x+1.0,DIM.y*i/names.length), mediumgrey);
+            if (values[i].length > 0) {
+                string v = string(values[i][0].y);
+                if (devup.length > 0 && devdn.length > 0) v += "{+" + string(devup[i][0]) + " \atop -" + string(devdn[i][0]) + "}";
+                else if (devup.length > 0) v += " \pm " + string(devup[i][0]);
+                label(pic, adapt_label("$"+v+"$", 0.5, DIM.x/2 - 0.4, E), (DIM.x/2+0.7, DIM.y*(names.length-i-0.5)/names.length), align=E);
+            }
+        }
+        if (SUBPLOT && length(ppath) > 0) shipout(ppath, pic);
+        return pic;
     }
 
     if (valy.length > 0) {
@@ -283,20 +339,6 @@ picture plot(real endx = 0, string ppath, string title, string xlabel, string yl
         real offs = length(ylabel) < 3 ? 0.1 : length(ylabel) < 6 ? 0 : -0.1;
         label(pic, rotate(90)*scale(0.5)*("\textit{"+ylabel+"}"), (-0.15,DIM.y+offs), align=N);
     }
-    if (length(title) > 0)
-        label(pic, scale(0.6)*replace(title, "%", "\%"), (DIM.x/2+0.55,DIM.y+0.7));
-
-    Label adapt_label(string text, real maxscale, real maxlength, pair align = (0,0)) {
-        picture pp;
-        unitsize(pp, 1cm);
-        label(pp, scale(maxscale)*text, (0,0));
-        real len = size(pp, true).x;
-        if (len > maxlength) maxscale *= maxlength / len;
-        if (align != E) text = "\phantom{pd}" + text;
-        if (align != W) text = text + "\phantom{pd}";
-        return scale(maxscale) * text;
-    }
-
     int xta = ceil( bminx/xscale);
     int xtb = floor(bmaxx/xscale);
     for (int x=xta; x <= xtb; ++x) {
@@ -315,34 +357,6 @@ picture plot(real endx = 0, string ppath, string title, string xlabel, string yl
         draw(pic, (0,ry) -- (-.1,ry));
         string s = logmode ? ("$10^{"+string(rys)+"}$") : format_number(rys, max(ytb, -yta)*yscale);
         label(pic, scale(0.4)*s, (0,ry), align=W);
-    }
-    string[] suffix_patterns = {" (", "-"};
-    string[] suffix_appends  = {"",   ")"};
-    string append_suffix;
-    int common_suffix = 0;
-    for (int j=0; j<suffix_patterns.length; ++j) {
-        common_suffix = rfind(names[0], suffix_patterns[j]);
-        append_suffix = suffix_appends[j];
-        if (common_suffix > 0) {
-            string suffix = substr(names[0], common_suffix);
-            common_suffix = length(names[0]) - common_suffix;
-            for (int i=1; i<names.length; ++i)
-                if (substr(names[i], length(names[i])-common_suffix) != suffix) {
-                    common_suffix = 0;
-                    break;
-                }
-        }
-        if (common_suffix > 0) break;
-    }
-    for (int i=0; i<names.length; ++i) {
-        if (common_suffix > 0) {
-            names[i] = substr(names[i], 0, length(names[i])-common_suffix) + append_suffix;
-        }
-        for (int j=0; j<10; ++j)
-            names[i] = replace(names[i], "<"+string(j)+">", " "+string(j));
-        names[i] = replace(replace(names[i], "<", " ("), ">", ")");
-        if (find(names[i], "  ") >= 0)
-            names[i] = replace(names[i], "  ", " (") + ")";
     }
     if (LEGENDA) {
         for (int i=0; i<names.length; i+=2) {

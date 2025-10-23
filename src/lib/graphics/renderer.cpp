@@ -1,4 +1,4 @@
-// Copyright © 2023 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
+// Copyright © 2025 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
 
 #include <cmath>
 #include <iostream>
@@ -707,7 +707,7 @@ void renderer::drawShadow(shape sh, glm::vec3 p, double d, color const& c) const
 }
 
 //! @brief It draws a star of lines, given the center and sides.
-void renderer::drawStar(glm::vec3 const& p, std::vector<glm::vec3> const& np) const {
+void renderer::drawStar(glm::vec3 const& p, std::vector<std::pair<glm::vec3, double>> const& np, color const& c) const {
     // Create matrices (used several times)
     glm::mat4 const& projection{ m_camera.getPerspective() };
     glm::mat4 const& view{ m_camera.getView() };
@@ -717,16 +717,16 @@ void renderer::drawStar(glm::vec3 const& p, std::vector<glm::vec3> const& np) co
         starData[6 * i + 0] = p[0];
         starData[6 * i + 1] = p[1];
         starData[6 * i + 2] = p[2];
-        starData[6 * i + 3] = np[i][0];
-        starData[6 * i + 4] = np[i][1];
-        starData[6 * i + 5] = np[i][2];
+        starData[6 * i + 3] = np[i].first[0];
+        starData[6 * i + 4] = np[i].first[1];
+        starData[6 * i + 5] = np[i].first[2];
     }
 
     m_shaderProgramCol.use();
     m_shaderProgramCol.setMat4("u_projection", projection);
     m_shaderProgramCol.setMat4("u_view", view);
     m_shaderProgramCol.setMat4("u_model", glm::mat4{ 1.0f });
-    m_shaderProgramCol.setVec4("u_color", glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f });
+    m_shaderProgramCol.setVec4("u_color", color_to_vec(c));
     glBindVertexArray(m_meshVAO[(int)vertex::star]);
     glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::star]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(starData), starData, GL_DYNAMIC_DRAW);

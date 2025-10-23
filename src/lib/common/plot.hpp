@@ -106,6 +106,18 @@ struct plot {
 template <typename O>
 O& operator<<(O& o, plot const& p) {
     if (p.empty()) return o;
+    if (p.xvals.size() == 1) {
+        o << "// " << p.yname << ":\n";
+        for (auto const& y : p.yvals) {
+            o << "// - " << y.first << ": " << std::get<0>(y.second[0]);
+            if (std::get<2>(y.second[0]) != point::no_dev)
+                o << " + " << std::get<1>(y.second[0]) << " - " << std::get<2>(y.second[0]);
+            else if (std::get<1>(y.second[0]) != point::no_dev)
+                o << " ± " << std::get<1>(y.second[0]);
+            o << "\n";
+        }
+        return o;
+    }
     o << "plot.put(plot.plot(name+\"-" << details::shorten(p.xname) << details::shorten(p.yname) << (p.title.size() ? "-" : "") << details::multi_shorten(p.title) << "\", \"" << p.title << "\", \"" << p.xname << "\", \"" << p.yname << "\", new string[] {";
     bool first = true;
     for (auto const& y : p.yvals) {

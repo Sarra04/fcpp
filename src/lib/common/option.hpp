@@ -69,6 +69,11 @@ class option<T, false> {
         return true;
     }
 
+    //! @brief Inequality operator.
+    bool operator!=(option const&) const {
+        return false;
+    }
+
     //! @brief Container size.
     static constexpr size_t size() {
         return 0;
@@ -176,6 +181,11 @@ class option<T, true> {
     //! @brief Equality operator.
     bool operator==(option const& o) const {
         return bool(m_data == o.m_data);
+    }
+
+    //! @brief Inequality operator.
+    bool operator!=(option const& o) const {
+        return bool(m_data != o.m_data);
     }
 
     //! @brief Container size.
@@ -310,6 +320,11 @@ class option<T, 2> {
     //! @brief Equality operator.
     bool operator==(option const& o) const {
         return m_some == o.m_some and (not m_some or bool(m_data == o.m_data));
+    }
+
+    //! @brief Inequality operator.
+    bool operator!=(option const& o) const {
+        return m_some != o.m_some or (m_some and bool(m_data != o.m_data));
     }
 
     //! @brief Container size.

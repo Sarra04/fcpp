@@ -363,9 +363,9 @@ MULTI_TEST(BasicsTest, Nbr, O, 3) {
 template <tier_t tier, typename node_t, typename D, typename E>
 auto sharing(std::integer_sequence<tier_t, tier> t, node_t& node, trace_t call_point, D init, E val) {
     internal::trace_call trace_caller(node.stack_trace, call_point);
-    return coordination::fold_hood(t, node, 0, [](int x, int y) {
-        return x+y;
-    }, coordination::nbr(t, node, 1, init, val), 0);
+    return coordination::fold_hood(t, node, 0, [](tuple<int,int> x, int y) -> int {
+        return get<1>(x)+y;
+    }, make_tuple(8, coordination::nbr(t, node, 1, init, val)), 0);
 }
 
 template <tier_t tier, typename node_t, tier_t s, tier_t p>

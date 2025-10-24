@@ -42,19 +42,8 @@ constexpr tier_t tier_sup<x, xs...> = x | tier_sup<xs...>;
 
 
 //! @cond INTERNAL
-//! @brief Forward declarations
-//! @{
+//! @brief Forward declaration
 template <tier_t tier, typename T, tier_t p = tier_t(-1), tier_t q = 0> class placed;
-
-namespace details {
-    template <tier_t tier, typename T, tier_t p, tier_t q, typename F>
-    placed<tier,T,p,q> place_data(common::type_sequence<placed<tier,T,p,q>>, F&&);
-    template <tier_t tier, typename T, tier_t p, tier_t q>
-    typename placed<tier,T,p,q>::field_type const& maybe_get_data(placed<tier,T,p,q> const&);
-    template <tier_t tier, typename T, tier_t p, tier_t q>
-    typename placed<tier,T,p,q>::field_type maybe_get_data(placed<tier,T,p,q>&&);
-}
-//! @}
 //! @endcond
 
 
@@ -196,23 +185,54 @@ namespace details {
     template <tier_t tier, typename T>
     struct to_placed<tier, field<T> const&, true> : public single_placed<tier, tier, T const&, tier_t(-1), tier_t(-1)> {};
 
-    //! @brief Removes placement descriptors if present (inactive).
+
+    //! @brief Base case assuming no occurrences of the template.
     template <typename T>
     struct decay_placed {
         using type = T;
     };
 
-    //! @brief Removes placement descriptors if present (inactive).
+    //! @brief Decay rvalue references.
+    template <typename T>
+    struct decay_placed<T&&> {
+        using type = typename decay_placed<T>::type&&;
+    };
+
+    //! @brief Decay lvalue references.
+    template <typename T>
+    struct decay_placed<T&> {
+        using type = typename decay_placed<T>::type&;
+    };
+
+    //! @brief Decay const references.
+    template <typename T>
+    struct decay_placed<T const&> {
+        using type = typename decay_placed<T>::type const&;
+    };
+
+    //! @brief Decay placed types.
     template <tier_t tier, typename T, tier_t p, tier_t q>
     struct decay_placed<placed<tier,T,p,q>> {
         using type = typename placed<tier,T,p,q>::field_type;
+    };
+
+    //! @brief Decay tuple-like types.
+    template <template<class...> class U, class... As>
+    struct decay_placed<U<As...>> {
+        using type = U<typename decay_placed<As>::type...>;
+    };
+
+    //! @brief Decay array-like types.
+    template <template<class,size_t> class U, class A, size_t N>
+    struct decay_placed<U<A, N>> {
+        using type = U<typename decay_placed<A>::type, N>;
     };
 }
 //! @endcond INTERNAL
 
 //! @brief Converts a type to a placed field.
 template <tier_t tier, typename A>
-using to_placed = details::to_placed<tier, common::partial_decay<A>>;
+using to_placed = typename details::to_placed<tier, common::partial_decay<A>>::type;
 
 
 //! @brief Extract the non-placed type from a placed type.
@@ -223,6 +243,19 @@ using del_placed = typename details::to_placed<tier, A>::value_type;
 //! @brief Removes placement descriptors if present.
 template <typename A>
 using decay_placed = typename details::decay_placed<A>::type;
+
+
+//! @cond INTERNAL
+//! @brief Forward declarations
+//! @{
+namespace details {
+    template <tier_t tier, typename T, tier_t p, tier_t q, typename F>
+    placed<tier,T,p,q> place_data(common::type_sequence<placed<tier,T,p,q>>, F&&);
+    template <typename T>
+    fcpp::decay_placed<T&&> maybe_get_data(T&&);
+}
+//! @}
+//! @endcond
 
 
 /**
@@ -250,16 +283,16 @@ class placed {
     //! @{
     template <tier_t tier1, typename T1, tier_t p1, tier_t q1, typename F>
     friend placed<tier1,T1,p1,q1> details::place_data(common::type_sequence<placed<tier1,T1,p1,q1>>, F&&);
-    template <tier_t tier1, typename T1, tier_t p1, tier_t q1>
-    friend typename placed<tier1,T1,p1,q1>::field_type const& details::maybe_get_data(placed<tier1,T1,p1,q1> const&);
-    template <tier_t tier1, typename T1, tier_t p1, tier_t q1>
-    friend typename placed<tier1,T1,p1,q1>::field_type details::maybe_get_data(placed<tier1,T1,p1,q1>&&);
+    template <typename T1>
+    friend decay_placed<T1&&> details::maybe_get_data(T1&&);
     //! @}
     //! @endcond
 
   public:
     //! @brief The dual placed type.
     using dual_type = placed<tier, T, q, p>;
+    //! @brief The local placed type.
+    using local_type = placed<tier, T, p, 0>;
     //! @brief The contained type.
     using value_type = T;
     //! @brief The underlying field type.
@@ -404,25 +437,10 @@ namespace details {
         return place_data(common::type_sequence<placed<tier,T,p,q>>{}, make_field(std::move(ids), std::move(vals)));
     }
 
-    //! @brief Accesses inner data of a possibly placed field (local overload).
+    //! @brief Accesses inner data of a possibly placed field.
     template <typename T>
-    T const& maybe_get_data(T const& x) {
-        return x;
-    }
-    //! @brief Accesses inner data of a possibly placed field (local moving overload).
-    template <typename T, typename = std::enable_if_t<not std::is_reference<T>::value>>
-    T maybe_get_data(T&& x) {
-        return std::move(x);
-    }
-    //! @brief Accesses inner data of a possibly placed field (placed overload).
-    template <tier_t tier, typename T, tier_t p, tier_t q>
-    typename placed<tier,T,p,q>::field_type const& maybe_get_data(placed<tier,T,p,q> const& x) {
-        return x.m_data.front();
-    }
-    //! @brief Accesses inner data of a possibly placed field (placed moving overload).
-    template <tier_t tier, typename T, tier_t p, tier_t q>
-    typename placed<tier,T,p,q>::field_type maybe_get_data(placed<tier,T,p,q>&& x) {
-        return std::move(x.m_data.front());
+    fcpp::decay_placed<T&&> maybe_get_data(T&& x) {
+        return reinterpret_cast<fcpp::decay_placed<T&&>>(std::forward<T>(x));
     }
 
     //! @brief Applies a void function on a sequence of placed fields (empty overload).
@@ -458,8 +476,8 @@ namespace details {
     //! @brief Accesses the value from a placed field corresponing to a certain device, returning a local placed value.
     template <tier_t tier, typename T>
     inline auto self(std::integer_sequence<tier_t, tier>, T&& x, device_t i) {
-        using P = to_placed<tier, T>;
-        using L = placed<tier, std::decay_t<typename P::value_type>, P::p_value, 0>;
+        using P = fcpp::to_placed<tier, T>;
+        using L = typename P::local_type;
         return maybe_perform(common::type_sequence<L>{}, [i](auto&& y){
             return self(std::forward<decltype(y)>(y), i);
         }, std::forward<T>(x));
@@ -473,10 +491,8 @@ namespace details {
     //! @brief Applies an operator pointwise on a sequence of placed fields (placed overload).
     template <intmax_t tier, typename P, typename... Ss, typename F, typename... Ts>
     auto pmap_hood(common::number_sequence<tier>, P, common::type_sequence<tuple<Ss...>>, F&& op, Ts const&... xs) {
-        constexpr tier_t p = P::p_value;
-        constexpr tier_t q = P::q_value;
         using T = local_result<F, Ss...>;
-        return maybe_perform(common::type_sequence<placed<tier,T,p,q>>{}, [&op](auto const&... ys){
+        return maybe_perform(common::type_sequence<placed<tier,T,P::p_value,P::q_value>>{}, [&op](auto const&... ys){
             return map_hood(op, ys...);
         }, xs...);
     }
@@ -487,7 +503,7 @@ namespace details {
 template <typename F, typename... Ts>
 auto pmap_hood(F&& op, Ts const&... xs) {
     constexpr tier_t tier = extract_tier<Ts...>;
-    using P = to_placed<tier, tuple<Ts const&...>>;
+    using P = details::to_placed<tier, tuple<Ts const&...>>;
     return details::pmap_hood(common::number_sequence<tier>{}, P{}, common::type_sequence<typename P::value_type>{}, op, xs...);
 }
 // TODO: rename to map_hood while avoiding conflicts with that in field.hpp
@@ -622,6 +638,6 @@ _DEF_BOP(||)
 #undef _DEF_IOP
 
 
-}
+} // namespace fcpp
 
 #endif // FCPP_DATA_PLACED_H_

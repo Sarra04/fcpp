@@ -284,7 +284,7 @@ auto fold_hood(node_t& node, trace_t call_point, O&& op, A const& a, B const& b)
  * It only folds values for neighbours in placement `q`.
  *
  * The folding operation \p op has to have two arguments, of type
- * `A` and `B`, with the first being the new value to be
+ * `to_local<A>` and `B`, with the first being the new value to be
  * aggregated and the second being the current accumulated value.
  *
  * The folding operation **may** also have a first `device_t` argument,
@@ -296,15 +296,17 @@ auto fold_hood(node_t& node, trace_t call_point, O&& op, A const& a, B const& b)
  * operation is applied with values from all ids except for the
  * self id in increasing order.
  */
-template <tier_t tier, typename node_t, typename O, typename A, tier_t p, tier_t q, typename B>
-placed<tier,A,p,0> fold_hood(std::integer_sequence<tier_t, tier>, node_t& node, trace_t call_point, O&& op, placed<tier,A,p,q> const& a, B const& b) {
+template <tier_t tier, typename node_t, typename O, typename A, typename B>
+auto fold_hood(std::integer_sequence<tier_t, tier>, node_t& node, trace_t call_point, O&& op, A const& a, B const& b) {
     static_assert(to_placed<tier,B>::q_value == 0, "the fold initial element must be a local value");
+    using P = to_placed<tier,A>;
+    using R = local_result<O, typename P::value_type, decay_placed<B>>;
     auto ctx = node.void_context(call_point);
-    fcpp::details::maybe_do(common::type_sequence<placed<tier,A,q,0>>{}, [&ctx](){
+    fcpp::details::maybe_do(common::type_sequence<placed<tier,void,P::q_value,0>>{}, [&ctx](){
         ctx.insert();
     });
-    return fcpp::details::maybe_perform(common::type_sequence<placed<tier,A,p,0>>{}, [&ctx, &op, &node](auto const& x, auto const& y){
-        return fcpp::details::fold_hood(op, x, y, ctx.align(q), node.uid);
+    return fcpp::details::maybe_perform(common::type_sequence<placed<tier,R,P::p_value,0>>{}, [&ctx, &op, &node](auto const& x, auto const& y){
+        return fcpp::details::fold_hood(op, x, y, ctx.align(P::q_value), node.uid);
     }, a, b);
 }
 //! @}
@@ -436,8 +438,8 @@ inline A old(node_t& node, trace_t call_point, A const& f) {
 template <tier_t tier, typename node_t, typename D, typename G>
 return_result_type<void, G(D)> old(std::integer_sequence<tier_t, tier> t, node_t& node, trace_t call_point, D const& f0, G&& op) {
     using E = export_result_type<void, G(D)>;
-    static_assert(tier == extract_tier<E>, "the export type E should be of the form placed<tier,...>");
-    auto ctx = node.template self_context<typename E::field_type>(call_point);
+    static_assert(tier == extract_tier<E>, "the export type E has the wrong tier");
+    auto ctx = node.template self_context<decay_placed<E>>(call_point);
     auto f = op(fcpp::details::maybe_perform(common::type_sequence<E>{}, [&ctx](auto const& x){
         return ctx.old(x);
     }, f0));
@@ -458,8 +460,8 @@ return_result_type<void, G(D)> old(std::integer_sequence<tier_t, tier> t, node_t
  */
 template <tier_t tier, typename node_t, typename D, typename E, typename = std::enable_if_t<is_placed<E>>>
 E old(std::integer_sequence<tier_t, tier> t, node_t& node, trace_t call_point, D const& f0, E const& f) {
-    static_assert(tier == extract_tier<E>, "the export type E should be of the form placed<tier,...>");
-    auto ctx = node.template self_context<typename E::field_type>(call_point);
+    static_assert(tier == extract_tier<E>, "the export type E has the wrong tier");
+    auto ctx = node.template self_context<decay_placed<E>>(call_point);
     fcpp::details::maybe_do(common::type_sequence<E>{}, [&ctx](auto const& x){
         ctx.insert(x);
     }, align(t, node, call_point, f));
@@ -533,13 +535,13 @@ template <tier_t tier, typename node_t, typename D, typename G>
 return_result_type<void, G(D)> nbr(std::integer_sequence<tier_t, tier>, node_t& node, trace_t call_point, D const& f0, G&& op) {
     static_assert(to_placed<tier,D>::q_value == 0, "the nbr initial element must be a local value");
     using E = export_result_type<void, G(D)>;
-    static_assert(tier == extract_tier<E>, "the export type E should be of the form placed<tier,...>");
-    using A = typename E::dual_type;
-    auto ctx = node.template nbr_context<typename E::field_type>(call_point);
-    auto f = op(fcpp::details::maybe_perform(common::type_sequence<A>{}, [&ctx](auto const& x){
+    static_assert(tier == extract_tier<E>, "the export type E has the wrong tier");
+    using PE = to_placed<tier, E>;
+    auto ctx = node.template nbr_context<decay_placed<E>>(call_point);
+    auto f = op(fcpp::details::maybe_perform(common::type_sequence<typename PE::dual_type>{}, [&ctx](auto const& x){
         return ctx.nbr(x);
     }, f0));
-    fcpp::details::maybe_do(common::type_sequence<E>{}, [&ctx](auto const& x){
+    fcpp::details::maybe_do(common::type_sequence<PE>{}, [&ctx](auto const& x){
         ctx.insert(x);
     }, details::maybe_second(common::type_sequence<void>{}, f));
     return details::maybe_first(common::type_sequence<void>{}, f);
@@ -559,16 +561,16 @@ return_result_type<void, G(D)> nbr(std::integer_sequence<tier_t, tier>, node_t& 
  * ~~~~~~~~~~~~~~~~~~~~~~~~~
  */
 template <tier_t tier, typename node_t, typename D, typename E, typename = std::enable_if_t<is_placed<E>>>
-typename E::dual_type nbr(std::integer_sequence<tier_t, tier>, node_t& node, trace_t call_point, D const& f0, E const& f) {
-    static_assert(tier == extract_tier<E>, "type E should be of the form placed<tier,T,q,p>");
+auto nbr(std::integer_sequence<tier_t, tier>, node_t& node, trace_t call_point, D const& f0, E const& f) {
+    static_assert(tier == extract_tier<E>, "the export type E has the wrong tier");
     using PD = to_placed<tier, D>;
     using PE = to_placed<tier, E>;
     static_assert(bitsubset(PE::q_value, PD::p_value) and PD::q_value == 0, "type D should be convertible to placed<tier,T,p,0>");
-    auto ctx = node.template nbr_context<typename E::field_type>(call_point);
-    fcpp::details::maybe_do(common::type_sequence<E>{}, [&ctx](auto const& x){
+    auto ctx = node.template nbr_context<decay_placed<E>>(call_point);
+    fcpp::details::maybe_do(common::type_sequence<PE>{}, [&ctx](auto const& x){
         ctx.insert(x);
     }, f);
-    return fcpp::details::maybe_perform(common::type_sequence<typename E::dual_type>{}, [&ctx](auto const& x){
+    return fcpp::details::maybe_perform(common::type_sequence<typename PE::dual_type>{}, [&ctx](auto const& x){
         return ctx.nbr(x);
     }, f0);
 }

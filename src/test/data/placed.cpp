@@ -94,8 +94,7 @@ TEST(PlacedTest, ToPlaced) {
         using res = C;                                                      \
         using exp = V;                                                      \
         using T = placed<tier, std::decay_t<exp>, tier_t(P), tier_t(Q)>;    \
-        EXPECT_SAME(typename res::value_type, exp);                         \
-        EXPECT_SAME(typename res::type, T);                                 \
+        EXPECT_SAME(res, T);                                                \
     }
     CHECK_PLACED(double,        -1, 0, G(to_placed<tier, double>));
     CHECK_PLACED(double&,       -1, 0, G(to_placed<tier, double&>));
@@ -158,8 +157,9 @@ TEST(PlacedTest, ToPlaced) {
     CHECK_PLACED(G(std::array<std::tuple<std::array<double,3>, char>,4>), 6, -1,
                  G(to_placed<tier, std::array<std::tuple<std::array<placed<tier, double, 6, 7>,3>&, field<char>>,4>>));
     EXPECT_SAME(decay_placed<int>, int);
-    EXPECT_SAME(decay_placed<placed<8,int,2,0>>, int);
+    EXPECT_SAME(decay_placed<placed<8,int,2,0>&>, int&);
     EXPECT_SAME(decay_placed<placed<8,int,2,4>>, field<int>);
+    EXPECT_SAME(decay_placed<std::tuple<placed<8,int,2,4> const&, std::array<placed<8,int,2,0>, 4>>>&, std::tuple<field<int> const&, std::array<int, 4>>&);
 }
 
 TEST(PlacedTest, Constructors) {
@@ -233,6 +233,11 @@ TEST(PlacedTest, PMapHood) {
     }, x, field<int>(8), w);
     EXPECT_SAME(decltype(r6), placed<8,int,6,tier_t(-1)>);
     EXPECT_EQ(r6.get_or(999), 999);
+    auto r7 = pmap_hood([](tuple<int,int> a){
+        return get<0>(a)+get<1>(a);
+    }, make_tuple(8, y));
+    EXPECT_SAME(decltype(r7), placed<8,int,11,6>);
+    EXPECT_EQ(r7.get_or(999), 10);
 }
 
 TEST(PlacedTest, Operators) {

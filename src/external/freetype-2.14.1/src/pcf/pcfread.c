@@ -121,7 +121,7 @@ THE SOFTWARE.
          toc->count > 9                     )
     {
       FT_TRACE0(( "pcf_read_TOC: adjusting number of tables"
-                  " (from %ld to %ld)\n",
+                  " (from %lu to %lu)\n",
                   toc->count,
                   FT_MIN( stream->size >> 4, 9 ) ));
       toc->count = FT_MIN( stream->size >> 4, 9 );
@@ -231,18 +231,18 @@ THE SOFTWARE.
 
       FT_TRACE4(( "pcf_read_TOC:\n" ));
 
-      FT_TRACE4(( "  number of tables: %ld\n", face->toc.count ));
+      FT_TRACE4(( "  number of tables: %lu\n", face->toc.count ));
 
       tables = face->toc.tables;
       for ( i = 0; i < toc->count; i++ )
       {
         for ( j = 0; j < sizeof ( tableNames ) / sizeof ( tableNames[0] );
               j++ )
-          if ( tables[i].type == (FT_UInt)( 1 << j ) )
+          if ( tables[i].type == 1UL << j )
             name = tableNames[j];
 
-        FT_TRACE4(( "  %d: type=%s, format=0x%lX,"
-                    " size=%ld (0x%lX), offset=%ld (0x%lX)\n",
+        FT_TRACE4(( "  %u: type=%s, format=0x%lX,"
+                    " size=%lu (0x%lX), offset=%lu (0x%lX)\n",
                     i, name,
                     tables[i].format,
                     tables[i].size, tables[i].size,
@@ -516,7 +516,7 @@ THE SOFTWARE.
     if ( error )
       goto Bail;
 
-    FT_TRACE4(( "  number of properties: %ld\n", orig_nprops ));
+    FT_TRACE4(( "  number of properties: %lu\n", orig_nprops ));
 
     /* rough estimate */
     if ( orig_nprops > size / PCF_PROPERTY_SIZE )
@@ -588,7 +588,7 @@ THE SOFTWARE.
     if ( error )
       goto Bail;
 
-    FT_TRACE4(( "  string size: %ld\n", string_size ));
+    FT_TRACE4(( "  string size: %lu\n", string_size ));
 
     /* rough estimate */
     if ( string_size > size - orig_nprops * PCF_PROPERTY_SIZE )
@@ -613,7 +613,8 @@ THE SOFTWARE.
 
     strings[string_size] = '\0';
 
-    if ( FT_QNEW_ARRAY( properties, nprops ) )
+    /* zero out in case of failure */
+    if ( FT_NEW_ARRAY( properties, nprops ) )
       goto Bail;
 
     face->properties = properties;
@@ -724,7 +725,7 @@ THE SOFTWARE.
     if ( error )
       return FT_THROW( Invalid_File_Format );
 
-    FT_TRACE4(( "  number of metrics: %ld\n", orig_nmetrics ));
+    FT_TRACE4(( "  number of metrics: %lu\n", orig_nmetrics ));
 
     /* rough estimate */
     if ( PCF_FORMAT_MATCH( format, PCF_DEFAULT_FORMAT ) )
@@ -775,7 +776,7 @@ THE SOFTWARE.
     FT_TRACE4(( "\n" ));
     for ( i = 1; i < face->nmetrics; i++, metrics++ )
     {
-      FT_TRACE5(( "  idx %ld:", i ));
+      FT_TRACE5(( "  idx %lu:", i ));
       error = pcf_get_metric( stream, format, metrics );
 
       metrics->bits = 0;
@@ -796,7 +797,7 @@ THE SOFTWARE.
         metrics->descent          = 0;
 
         FT_TRACE0(( "pcf_get_metrics:"
-                    " invalid metrics for glyph %ld\n", i ));
+                    " invalid metrics for glyph %lu\n", i ));
       }
     }
 
@@ -857,7 +858,7 @@ THE SOFTWARE.
     if ( !PCF_FORMAT_MATCH( format, PCF_DEFAULT_FORMAT ) )
       return FT_THROW( Invalid_File_Format );
 
-    FT_TRACE4(( "  number of bitmaps: %ld\n", orig_nbitmaps ));
+    FT_TRACE4(( "  number of bitmaps: %lu\n", orig_nbitmaps ));
 
     /* see comment in `pcf_get_metrics' */
     if ( orig_nbitmaps > 65534 )
@@ -1033,16 +1034,6 @@ THE SOFTWARE.
          enc->lastRow  > 0xFF         )
       return FT_THROW( Invalid_Table );
 
-    nencoding = (FT_ULong)( enc->lastCol - enc->firstCol + 1 ) *
-                (FT_ULong)( enc->lastRow - enc->firstRow + 1 );
-
-    if ( FT_NEW_ARRAY( enc->offset, nencoding ) )
-      goto Bail;
-
-    error = FT_Stream_EnterFrame( stream, 2 * nencoding );
-    if ( error )
-      goto Exit;
-
     FT_TRACE5(( "\n" ));
 
     defaultCharRow = enc->defaultChar >> 8;
@@ -1062,6 +1053,13 @@ THE SOFTWARE.
       defaultCharRow = enc->firstRow;
       defaultCharCol = enc->firstCol;
     }
+
+    nencoding = (FT_ULong)( enc->lastCol - enc->firstCol + 1 ) *
+                (FT_ULong)( enc->lastRow - enc->firstRow + 1 );
+
+    error = FT_Stream_EnterFrame( stream, 2 * nencoding );
+    if ( error )
+      goto Bail;
 
     /*
      * FreeType mandates that glyph index 0 is the `undefined glyph', which
@@ -1108,6 +1106,9 @@ THE SOFTWARE.
     /* copy metrics of default character to index 0 */
     face->metrics[0] = face->metrics[defaultCharEncodingOffset];
 
+    if ( FT_QNEW_ARRAY( enc->offset, nencoding ) )
+      goto Bail;
+
     /* now loop over all values */
     offset = enc->offset;
     for ( i = enc->firstRow; i <= enc->lastRow; i++ )
@@ -1129,11 +1130,6 @@ THE SOFTWARE.
       }
     }
     FT_Stream_ExitFrame( stream );
-
-    return error;
-
-  Exit:
-    FT_FREE( enc->offset );
 
   Bail:
     return error;
@@ -1612,7 +1608,7 @@ THE SOFTWARE.
         else
         {
           /* this is a heuristical value */
-          bsize->width = (FT_Short)FT_MulDiv( bsize->height, 2, 3 );
+          bsize->width = ( bsize->height * 2 + 1 ) / 3;
         }
 
         prop = pcf_find_property( face, "POINT_SIZE" );

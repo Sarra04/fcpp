@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (C) 2005-2021 by
+# Copyright (C) 2005-2025 by
 # David Turner, Robert Wilhelm, and Werner Lemberg.
 #
 # This file is part of the FreeType project, and may only be used, modified,
@@ -99,7 +99,7 @@ check_tool_version ()
   if test "$field"x = x; then
     field=3  # default to 3 for all GNU autotools, after filtering enclosed string
   fi
-  version=`$1 --version | head -1 | sed 's/([^)]*)/()/g' | cut -d ' ' -f $field`
+  version=`$1 --version | sed -n '1s/([^)]*)/()/gp' | cut -d ' ' -f $field`
   version_check=`compare_to_minimum_version $version $4`
   if test "$version_check"x = 0x; then
     echo "ERROR: Your version of the \`$2' tool is too old."
@@ -110,7 +110,10 @@ check_tool_version ()
   fi
 }
 
-if test ! -f ./builds/unix/configure.raw; then
+# Solaris 10's shell doesn't like the `!` operator to negate the exit status.
+if test -f ./builds/unix/configure.raw; then
+  :
+else
   echo "You must be in the same directory as \`autogen.sh'."
   echo "Bootstrapping doesn't work if srcdir != builddir."
   exit 1
@@ -179,15 +182,18 @@ copy_submodule_files ()
   cp $DLG_SRC_DIR/* src/dlg
 }
 
-DLG_INC_DIR=subprojects/dlg/include/dlg
-DLG_SRC_DIR=subprojects/dlg/src/dlg
+if test -d ".git" -o -h ".git"; then
+  DLG_INC_DIR=subprojects/dlg/include/dlg
+  DLG_SRC_DIR=subprojects/dlg/src/dlg
 
-if ! test -d "$DLG_INC_DIR"; then
-  echo "Checking out submodule in \`subprojects/dlg':"
-  git submodule init
-  git submodule update
+  if test -d "$DLG_INC_DIR"; then
+    :
+  else
+    echo "Checking out submodule in \`subprojects/dlg':"
+    git submodule update --init
+  fi
+
+  copy_submodule_files
 fi
-
-copy_submodule_files
 
 # EOF

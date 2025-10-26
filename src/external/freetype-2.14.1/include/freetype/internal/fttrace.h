@@ -4,7 +4,7 @@
  *
  *   Tracing handling (specification only).
  *
- * Copyright (C) 2002-2021 by
+ * Copyright (C) 2002-2025 by
  * David Turner, Robert Wilhelm, and Werner Lemberg.
  *
  * This file is part of the FreeType project, and may only be used,
@@ -19,7 +19,7 @@
   /* definitions of trace levels for FreeType 2 */
 
   /* the maximum string length (if the argument to `FT_TRACE_DEF` */
-  /* gets used as a string) plus one charachter for ':' plus      */
+  /* gets used as a string) plus one character for ':' plus       */
   /* another one for the trace level                              */
 #define FT_MAX_TRACE_LEVEL_LENGTH  (9 + 1 + 1)
 
@@ -49,6 +49,9 @@ FT_TRACE_DEF( synth )     /* bold/slant synthesizer  (ftsynth.c)  */
 FT_TRACE_DEF( raster )    /* monochrome rasterizer   (ftraster.c) */
 FT_TRACE_DEF( smooth )    /* anti-aliasing raster    (ftgrays.c)  */
 
+  /* ot-svg module */
+FT_TRACE_DEF( otsvg )     /* OT-SVG renderer         (ftsvg.c)    */
+
   /* cache sub-system */
 FT_TRACE_DEF( cache )     /* cache sub-system   (ftcache.c, etc.) */
 
@@ -61,6 +64,8 @@ FT_TRACE_DEF( ttbdf )     /* TrueType embedded BDF   (ttbdf.c)    */
 FT_TRACE_DEF( ttcmap )    /* charmap handler         (ttcmap.c)   */
 FT_TRACE_DEF( ttcolr )    /* glyph layer table       (ttcolr.c)   */
 FT_TRACE_DEF( ttcpal )    /* color palette table     (ttcpal.c)   */
+FT_TRACE_DEF( ttgpos )    /* GPOS handler            (ttgpos.c)   */
+FT_TRACE_DEF( ttsvg )     /* OpenType SVG table      (ttsvg.c)    */
 FT_TRACE_DEF( ttkern )    /* kerning handler         (ttkern.c)   */
 FT_TRACE_DEF( ttload )    /* basic TrueType tables   (ttload.c)   */
 FT_TRACE_DEF( ttmtx )     /* metrics-related tables  (ttmtx.c)    */
@@ -154,6 +159,7 @@ FT_TRACE_DEF( gxvprop )
 FT_TRACE_DEF( gxvtrak )
 
   /* autofit components */
+FT_TRACE_DEF( afadjust )
 FT_TRACE_DEF( afcjk )
 FT_TRACE_DEF( afglobal )
 FT_TRACE_DEF( afhints )

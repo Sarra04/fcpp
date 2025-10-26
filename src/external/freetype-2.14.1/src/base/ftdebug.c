@@ -4,7 +4,7 @@
  *
  *   Debugging and logging component (body).
  *
- * Copyright (C) 1996-2021 by
+ * Copyright (C) 1996-2025 by
  * David Turner, Robert Wilhelm, and Werner Lemberg.
  *
  * This file is part of the FreeType project, and may only be used,
@@ -64,7 +64,7 @@
    *    with the actual log message if set to true.
    *
    * 5. The flag `ft_timestamp_flag` prints time along with the actual log
-   *    message if set to ture.
+   *    message if set to true.
    *
    * 6. `ft_have_newline_char` is used to differentiate between a log
    *    message with and without a trailing newline character.
@@ -88,7 +88,7 @@
   dlg_handler            ft_default_log_handler = NULL;
   FT_Custom_Log_Handler  custom_output_handler  = NULL;
 
-#endif /* FT_DEBUG_LOGGING*/
+#endif /* FT_DEBUG_LOGGING */
 
 
 #ifdef FT_DEBUG_LEVEL_ERROR

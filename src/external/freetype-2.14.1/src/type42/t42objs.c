@@ -4,7 +4,7 @@
  *
  *   Type 42 objects manager (body).
  *
- * Copyright (C) 2002-2021 by
+ * Copyright (C) 2002-2025 by
  * Roberto Alameda.
  *
  * This file is part of the FreeType project, and may only be used,
@@ -44,14 +44,8 @@
 
     parser = &loader.parser;
 
-    if ( FT_QALLOC( face->ttf_data, 12 ) )
-      goto Exit;
-
-    /* while parsing the font we always update `face->ttf_size' so that */
-    /* even in case of buggy data (which might lead to premature end of */
-    /* scanning without causing an error) the call to `FT_Open_Face' in */
-    /* `T42_Face_Init' passes the correct size                          */
-    face->ttf_size = 12;
+    face->ttf_data = NULL;
+    face->ttf_size = 0;
 
     error = t42_parser_init( parser,
                              face->root.stream,
@@ -152,6 +146,11 @@
 
   Exit:
     t42_loader_done( &loader );
+    if ( error )
+    {
+      FT_FREE( face->ttf_data );
+      face->ttf_size = 0;
+    }
     return error;
   }
 
@@ -511,9 +510,10 @@
 
     error = FT_New_Size( t42face->ttf_face, &ttsize );
     if ( !error )
+    {
       t42size->ttsize = ttsize;
-
-    FT_Activate_Size( ttsize );
+      FT_Activate_Size( ttsize );
+    }
 
     return error;
   }
@@ -658,7 +658,7 @@
     FT_Driver_Class  ttclazz = ((T42_Driver)glyph->face->driver)->ttclazz;
 
 
-    FT_TRACE1(( "T42_GlyphSlot_Load: glyph index %d\n", glyph_index ));
+    FT_TRACE1(( "T42_GlyphSlot_Load: glyph index %u\n", glyph_index ));
 
     /* map T42 glyph index to embedded TTF's glyph index */
     glyph_index = (FT_UInt)ft_strtol(

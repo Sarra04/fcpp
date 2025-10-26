@@ -1,4 +1,4 @@
-// Copyright © 2023 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
+// Copyright © 2025 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
 
 /**
  * @file displayer.hpp
@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -72,11 +73,27 @@ namespace tags {
     template <intmax_t... cs>
     struct color_val {};
 
-    //! @brief Declaration tag associating to storage tags with the text of the node labels (defaults to no text).
+    //! @brief Declaration tag associating to a storage tag regulating the color of edges (defaults to none).
+    template <typename T>
+    struct edge_color_tag {};
+
+    //! @brief Declaration tag associating to the base colors of edges (defaults to black).
+    template <intmax_t c>
+    struct edge_color_val {};
+
+    //! @brief Declaration tag associating to a storage tag regulating the size of edges (defaults to none).
+    template <typename T>
+    struct edge_size_tag {};
+
+    //! @brief Declaration tag associating to the base size of edges (defaults to 0).
+    template <intmax_t num, intmax_t den = 1>
+    struct edge_size_val {};
+
+    //! @brief Declaration tag associating to a storage tag with the text of the node labels (defaults to no text).
     template <typename T>
     struct label_text_tag {};
 
-    //! @brief Declaration tag associating to storage tags regulating the size of node labels (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the size of node labels (defaults to none).
     template <typename T>
     struct label_size_tag {};
 
@@ -84,7 +101,7 @@ namespace tags {
     template <intmax_t num, intmax_t den = 1>
     struct label_size_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the color of node labels (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the color of node labels (defaults to none).
     template <typename T>
     struct label_color_tag {};
 
@@ -100,7 +117,7 @@ namespace tags {
     template <intmax_t n>
     struct shadow_shape_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the color of node shadows (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the color of node shadows (defaults to none).
     template <typename T>
     struct shadow_color_tag {};
 
@@ -108,7 +125,7 @@ namespace tags {
     template <intmax_t c>
     struct shadow_color_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the size of node shadows (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the size of node shadows (defaults to none).
     template <typename T>
     struct shadow_size_tag {};
 
@@ -116,7 +133,7 @@ namespace tags {
     template <intmax_t num, intmax_t den = 1>
     struct shadow_size_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the time duration of past positions creating the node tail (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the time duration of past positions creating the node tail (defaults to none).
     template <typename T>
     struct tail_time_tag {};
 
@@ -128,7 +145,7 @@ namespace tags {
     template <intmax_t num, intmax_t den = 1>
     struct tail_granularity {};
 
-    //! @brief Declaration tag associating to storage tags regulating the color of the node tail (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the color of the node tail (defaults to none).
     template <typename T>
     struct tail_color_tag {};
 
@@ -136,7 +153,7 @@ namespace tags {
     template <intmax_t c>
     struct tail_color_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the width of the node tail (defaults to none).
+    //! @brief Declaration tag associating to a storage tag regulating the width of the node tail (defaults to none).
     template <typename T>
     struct tail_width_tag {};
 
@@ -517,6 +534,10 @@ namespace details {
  * - \ref tags::size_val defines the base size of nodes (defaults to 1).
  * - \ref tags::color_tag defines storage tags regulating the colors of nodes (defaults to none).
  * - \ref tags::color_val defines the base colors of nodes (defaults to white).
+ * - \ref tags::edge_color_tag defines a storage tag regulating the color of edges (defaults to none).
+ * - \ref tags::edge_color_val defines the base color of edges (defaults to black).
+ * - \ref tags::edge_size_tag defines a storage tag regulating the size of edges (defaults to none).
+ * - \ref tags::edge_size_val defines the base size of edges (defaults to 0).
  * - \ref tags::label_text_tag defines a storage tag regulating the text of node labels (defaults to no text).
  * - \ref tags::label_size_tag defines a storage tag regulating the size of node labels (defaults to none).
  * - \ref tags::label_size_val defines the base size of node labels (defaults to 1).
@@ -588,6 +609,18 @@ struct displayer {
     //! @brief Base colors of nodes (defaults to white).
     using color_val = common::option_nums<tags::color_val, Ts...>;
 
+    //! @brief Storage tag regulating the color of edges.
+    using edge_color_tag = common::option_type<tags::edge_color_tag, void, Ts...>;
+
+    //! @brief Base color of edges (defaults to black).
+    constexpr static intmax_t edge_color_val = common::option_num<tags::edge_color_val, BLACK, Ts...>;
+
+    //! @brief Storage tag regulating the size of edges.
+    using edge_size_tag = common::option_type<tags::edge_size_tag, void, Ts...>;
+
+    //! @brief Base size of edges (defaults to 0).
+    constexpr static double edge_size_val = common::option_float<tags::edge_size_val, 0, 1, Ts...>;
+
     //! @brief Storage tag associated to the text of the node labels.
     using label_text_tag = common::option_type<tags::label_text_tag, void, Ts...>;
 
@@ -609,10 +642,10 @@ struct displayer {
     //! @brief Base shape of nodes (defaults to the same shape as the node).
     constexpr static intmax_t shadow_shape_val = common::option_num<tags::shadow_shape_val, -1, Ts...>;
 
-    //! @brief Storage tags regulating the color of node shadows.
+    //! @brief Storage tag regulating the color of node shadows.
     using shadow_color_tag = common::option_type<tags::shadow_color_tag, void, Ts...>;
 
-    //! @brief Base colors of node shadows (defaults to the same color as the node).
+    //! @brief Base color of node shadows (defaults to the same color as the node).
     constexpr static intmax_t shadow_color_val = common::option_num<tags::shadow_color_val, -1, Ts...>;
 
     //! @brief Storage tag regulating the size of node shadows.
@@ -739,10 +772,16 @@ struct displayer {
                 }
                 if (star) {
                     // gather neighbours' positions
-                    std::vector<glm::vec3> np;
-                    for (device_t d : m_prev_nbr_uids)
-                        np.push_back(P::node::net.node_at(d).get_cached_position());
-                    P::node::net.getRenderer().drawStar(p, np);
+                    std::unordered_map<packed_color, std::pair<std::vector<std::pair<glm::vec3, float>>, std::vector<glm::vec3>>> np;
+                    auto ec = common::get_or<edge_color_tag>(P::node::storage_tuple(), edge_color_val);
+                    auto es = common::get_or<edge_size_tag>(P::node::storage_tuple(), edge_size_val);
+                    for (device_t d : m_prev_nbr_uids) {
+                        float s = fcpp::details::self(es, d);
+                        if (s > 0) np[fcpp::details::self(ec, d)].first.emplace_back(P::node::net.node_at(d).get_cached_position(), s);
+                        else np[fcpp::details::self(ec, d)].second.push_back(P::node::net.node_at(d).get_cached_position());
+                    }
+                    for (auto const& n : np)
+                        P::node::net.getRenderer().drawStar(p, n.second.first, n.second.second, color(n.first));
                 }
             }
 

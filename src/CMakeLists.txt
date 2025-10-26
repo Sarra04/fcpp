@@ -266,7 +266,7 @@ if(FCPP_BUILD_GL)
     )
     add_subdirectory(./external/glm-1.0.2)
     add_subdirectory(./external/glfw-3.4)
-    add_subdirectory(./external/freetype-2.11.0)
+    add_subdirectory(./external/freetype-2.14.1)
     target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
     target_include_directories(
         fcpp PUBLIC
@@ -274,7 +274,7 @@ if(FCPP_BUILD_GL)
         ./external/glad-core-3.3/include
         ./external/glm-1.0.2
         ./external/glfw-3.4/include
-        ./external/freetype-2.11.0/devel
+        ./external/freetype-2.14.1/devel
     )
     target_link_libraries(
         fcpp PUBLIC

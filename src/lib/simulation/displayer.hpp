@@ -73,6 +73,22 @@ namespace tags {
     template <intmax_t... cs>
     struct color_val {};
 
+    //! @brief Declaration tag associating to a storage tag regulating the color of edges (defaults to none).
+    template <typename T>
+    struct edge_color_tag {};
+
+    //! @brief Declaration tag associating to the base colors of edges (defaults to black).
+    template <intmax_t c>
+    struct edge_color_val {};
+
+    //! @brief Declaration tag associating to a storage tag regulating the size of edges (defaults to none).
+    template <typename T>
+    struct edge_size_tag {};
+
+    //! @brief Declaration tag associating to the base size of edges (defaults to 0).
+    template <intmax_t num, intmax_t den = 1>
+    struct edge_size_val {};
+
     //! @brief Declaration tag associating to a storage tag with the text of the node labels (defaults to no text).
     template <typename T>
     struct label_text_tag {};
@@ -116,23 +132,6 @@ namespace tags {
     //! @brief Declaration tag associating to the base size of node shadows (defaults to 0).
     template <intmax_t num, intmax_t den = 1>
     struct shadow_size_val {};
-
-    //! @brief Declaration tag associating to a storage tag regulating the color of edges (defaults to none).
-    template <typename T>
-    struct edge_color_tag {};
-
-    //! @brief Declaration tag associating to the base colors of edges (defaults to black).
-    template <intmax_t c>
-    struct edge_color_val {};
-
-    //! @brief Declaration tag associating to a storage tag regulating the size of edges (defaults to none).
-    template <typename T>
-    struct edge_size_tag {};
-
-    //! @brief Declaration tag associating to the base size of edges (defaults to 0).
-    template <intmax_t num, intmax_t den = 1>
-    struct edge_size_val {};
-
 
     //! @brief Declaration tag associating to a storage tag regulating the time duration of past positions creating the node tail (defaults to none).
     template <typename T>
@@ -535,6 +534,10 @@ namespace details {
  * - \ref tags::size_val defines the base size of nodes (defaults to 1).
  * - \ref tags::color_tag defines storage tags regulating the colors of nodes (defaults to none).
  * - \ref tags::color_val defines the base colors of nodes (defaults to white).
+ * - \ref tags::edge_color_tag defines a storage tag regulating the color of edges (defaults to none).
+ * - \ref tags::edge_color_val defines the base color of edges (defaults to black).
+ * - \ref tags::edge_size_tag defines a storage tag regulating the size of edges (defaults to none).
+ * - \ref tags::edge_size_val defines the base size of edges (defaults to 0).
  * - \ref tags::label_text_tag defines a storage tag regulating the text of node labels (defaults to no text).
  * - \ref tags::label_size_tag defines a storage tag regulating the size of node labels (defaults to none).
  * - \ref tags::label_size_val defines the base size of node labels (defaults to 1).
@@ -546,10 +549,6 @@ namespace details {
  * - \ref tags::shadow_color_val defines the base color of node shadows (defaults to the same color as the node).
  * - \ref tags::shadow_size_tag defines a storage tag regulating the size of node shadows (defaults to none).
  * - \ref tags::shadow_size_val defines the base size of node shadows (defaults to 0).
- * - \ref tags::edge_color_tag defines a storage tag regulating the color of edges (defaults to none).
- * - \ref tags::edge_color_val defines the base color of edges (defaults to black).
- * - \ref tags::edge_size_tag defines a storage tag regulating the size of edges (defaults to none).
- * - \ref tags::edge_size_val defines the base size of edges (defaults to 0).
  * - \ref tags::tail_time_tag defines a storage tag regulating the time duration of past positions creating the node tail (defaults to none).
  * - \ref tags::tail_time_val defines the base time duration of past positions creating the node tail (defaults to 0).
  * - \ref tags::tail_granularity defines the maximum granularity of snapshot points in tails in FPS (defaults to \ref FCPP_TAIL_GRANULARITY).
@@ -610,6 +609,18 @@ struct displayer {
     //! @brief Base colors of nodes (defaults to white).
     using color_val = common::option_nums<tags::color_val, Ts...>;
 
+    //! @brief Storage tag regulating the color of edges.
+    using edge_color_tag = common::option_type<tags::edge_color_tag, void, Ts...>;
+
+    //! @brief Base color of edges (defaults to black).
+    constexpr static intmax_t edge_color_val = common::option_num<tags::edge_color_val, BLACK, Ts...>;
+
+    //! @brief Storage tag regulating the size of edges.
+    using edge_size_tag = common::option_type<tags::edge_size_tag, void, Ts...>;
+
+    //! @brief Base size of edges (defaults to 0).
+    constexpr static double edge_size_val = common::option_float<tags::edge_size_val, 0, 1, Ts...>;
+
     //! @brief Storage tag associated to the text of the node labels.
     using label_text_tag = common::option_type<tags::label_text_tag, void, Ts...>;
 
@@ -642,18 +653,6 @@ struct displayer {
 
     //! @brief Base size of node shadows (defaults to 0).
     constexpr static double shadow_size_val = common::option_float<tags::shadow_size_val, 0, 1, Ts...>;
-
-    //! @brief Storage tag regulating the color of edges.
-    using edge_color_tag = common::option_type<tags::edge_color_tag, void, Ts...>;
-
-    //! @brief Base color of edges (defaults to black).
-    constexpr static intmax_t edge_color_val = common::option_num<tags::edge_color_val, BLACK, Ts...>;
-
-    //! @brief Storage tag regulating the size of edges.
-    using edge_size_tag = common::option_type<tags::edge_size_tag, void, Ts...>;
-
-    //! @brief Base size of edges (defaults to 0).
-    constexpr static double edge_size_val = common::option_float<tags::edge_size_val, 0, 1, Ts...>;
 
     //! @brief Storage tag regulating the time duration of past positions creating the node tail.
     using tail_time_tag = common::option_type<tags::tail_time_tag, void, Ts...>;
@@ -773,13 +772,16 @@ struct displayer {
                 }
                 if (star) {
                     // gather neighbours' positions
-                    std::unordered_map<packed_color, std::vector<std::pair<glm::vec3, double>>> np;
+                    std::unordered_map<packed_color, std::pair<std::vector<std::pair<glm::vec3, float>>, std::vector<glm::vec3>>> np;
                     auto ec = common::get_or<edge_color_tag>(P::node::storage_tuple(), edge_color_val);
-                    auto es = common::get_or<edge_color_tag>(P::node::storage_tuple(), edge_size_val);
-                    for (device_t d : m_prev_nbr_uids)
-                        np[fcpp::details::self(ec, d)].emplace_back(P::node::net.node_at(d).get_cached_position(), fcpp::details::self(es, d));
+                    auto es = common::get_or<edge_size_tag>(P::node::storage_tuple(), edge_size_val);
+                    for (device_t d : m_prev_nbr_uids) {
+                        float s = fcpp::details::self(es, d);
+                        if (s > 0) np[fcpp::details::self(ec, d)].first.emplace_back(P::node::net.node_at(d).get_cached_position(), s);
+                        else np[fcpp::details::self(ec, d)].second.push_back(P::node::net.node_at(d).get_cached_position());
+                    }
                     for (auto const& n : np)
-                        P::node::net.getRenderer().drawStar(p, n.second, color(n.first));
+                        P::node::net.getRenderer().drawStar(p, n.second.first, n.second.second, color(n.first));
                 }
             }
 

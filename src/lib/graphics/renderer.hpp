@@ -81,7 +81,7 @@ namespace fcpp {
             void drawShadow(shape sh, glm::vec3 p, double d, color const& c) const;
 
             //! @brief It draws a star of lines, given the center and sides.
-            void drawStar(glm::vec3 const& p, std::vector<std::pair<glm::vec3, double>> const& np, color const& c) const;
+            void drawStar(glm::vec3 const& p, std::vector<std::pair<glm::vec3, float>> const& np, std::vector<glm::vec3> const& nl, color const& c) const;
 
             //! @brief It draws the tail of a node, as a sequence of lines given their endpoints, the color to be used and a width.
             void drawTail(std::deque<glm::vec3> const& p, std::deque<vec<2>> const& n, color const& c, float w) const;

@@ -5,7 +5,7 @@
 namespace fcpp
 {
 
-gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const time_t ref_time) {
+gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time) {
     std::cout << "gps_trace constructor - 1" << std::endl;
     std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
@@ -18,7 +18,7 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
     std::string content = buffer.str();
     file.close();
 
-    time_t start_time = 0.0;
+    times_t start_time = 0.0;
     device_t track_id = 0;
     vec<2> pos;
 
@@ -54,7 +54,7 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
                         double gps_lon = std::stod(lon->value());
 
                         if (track.empty()) { // first node entered
-                            start_time = parse_times_t(time_node->value());
+                            start_time = static_cast<times_t>(parse_time_t(time_node->value()));
                         }
 
                         pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
@@ -62,7 +62,7 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
                         track_point point;
                         point.x = pos[0];
                         point.y = pos[1];
-                        point.timestamp = parse_times_t(time_node->value()) - start_time + ref_time;
+                        point.timestamp = static_cast<times_t>(parse_time_t(time_node->value())) - start_time + ref_time;
 
                         track.push_back(point);
                     }
@@ -92,7 +92,7 @@ vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double
     return make_vec(x, y);
 }
 
-times_t gps_trace::parse_times_t(const std::string &string) {
+time_t gps_trace::parse_time_t(const std::string &string) {
     struct tm tm = {};
     int year, month, day, hour, minute, second;
 
@@ -109,7 +109,7 @@ times_t gps_trace::parse_times_t(const std::string &string) {
     return mktime(&tm);
 }
 
-gps_trace::track_point gps_trace::next_point(track_data& td, fcpp::times_t time) {
+track_point gps_trace::next_point(track_data& td, fcpp::times_t time) {
     track_point& tp = td.track[td.index];
 
     if(tp.timestamp < time && td.index < td.track.size() - 1) {

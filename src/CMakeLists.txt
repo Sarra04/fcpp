@@ -166,6 +166,7 @@ set(
     lib/data/bloom.cpp
     lib/data/color.cpp
     lib/data/field.cpp
+    lib/data/gps_trace.cpp
     lib/data/hyperloglog.cpp
     lib/data/ordered.cpp
     lib/data/shape.cpp
@@ -198,7 +199,6 @@ set(
     lib/simulation/simulated_map.cpp
     lib/simulation/simulated_positioner.cpp
     lib/simulation/spawner.cpp
-    lib/simulation/gps_trace.cpp
 )
 if(FCPP_BUILD_GL)
     list(

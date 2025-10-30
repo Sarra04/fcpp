@@ -12,6 +12,7 @@
 
 #include "lib/coordination/utils.hpp"
 #include "lib/data/vec.hpp"
+#include "lib/data/gps_trace.hpp"
 
 
 /**
@@ -239,6 +240,40 @@ inline typename node_t::position_type neighbour_charged_force(node_t& node, trac
 //! @brief Export list for neighbour_charged_force.
 using neighbour_charged_force_t = common::export_list<real_t>;
 
+//! @brief Aggregate function to follow the GPS track assigned to the calling node
+template <typename node_t>
+bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
+    track_data td = trace.find_track(node.uid);
+
+    if (td.index == -1) { return false; } //track not found for current node
+    if (td.index >= td.track.size() - 1) { return false; } //end of track
+
+    track_point target = trace.next_point(td, node.current_time());
+
+    vec<2> direction = make_vec(target.x, target.y) - node.position();
+
+    double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
+
+    // normalize direction vector
+    direction /= distance;
+
+    double time_left = target.timestamp - node.current_time();
+    double next_time_step = node.next_time() - node.current_time();
+
+    double velocity;
+    if (time_left > next_time_step)
+    {
+        velocity = distance / time_left;
+    }
+    else
+    {
+        velocity = distance / next_time_step;
+    }
+
+    node.velocity() = direction * velocity;
+
+    return true;
+}
 
 }
 

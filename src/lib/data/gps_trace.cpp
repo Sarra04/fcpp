@@ -1,12 +1,10 @@
 #include "gps_trace.hpp"
 
-#define EARTH_RADIUS 6371000.0
+static constexpr double EARTH_RADIUS = 6371000.0;
 
-namespace fcpp
-{
+namespace fcpp {
 
 gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time) {
-    std::cout << "gps_trace constructor - 1" << std::endl;
     std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
         throw std::runtime_error("Failed to open GPX file: " + src_gpx_file);
@@ -31,19 +29,13 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
             throw std::runtime_error("Failed to find gpx node in file: " + src_gpx_file);
         }
 
-        for (rapidxml::xml_node<> *trk_node = gpx_node->first_node("trk");
-                trk_node;
-                trk_node = trk_node->next_sibling("trk")) {
+        for (rapidxml::xml_node<> *trk_node = gpx_node->first_node("trk"); trk_node; trk_node = trk_node->next_sibling("trk")) {
             
             std::vector<track_point> track = {};
 
-            for (rapidxml::xml_node<> *trkseg_node = trk_node->first_node("trkseg");
-                    trkseg_node;
-                    trkseg_node = trkseg_node->next_sibling("trkseg")) {
+            for (rapidxml::xml_node<> *trkseg_node = trk_node->first_node("trkseg"); trkseg_node; trkseg_node = trkseg_node->next_sibling("trkseg")) {
 
-                for (rapidxml::xml_node<> *trkpt_node = trkseg_node->first_node("trkpt");
-                        trkpt_node;
-                        trkpt_node = trkpt_node->next_sibling("trkpt")) {
+                for (rapidxml::xml_node<> *trkpt_node = trkseg_node->first_node("trkpt"); trkpt_node; trkpt_node = trkpt_node->next_sibling("trkpt")) {
 
                     rapidxml::xml_attribute<> *lat = trkpt_node->first_attribute("lat");
                     rapidxml::xml_attribute<> *lon = trkpt_node->first_attribute("lon");
@@ -118,6 +110,14 @@ track_point gps_trace::next_point(track_data& td, fcpp::times_t time) {
     }
 
     return tp;
+}
+
+track_data gps_trace::find_track(device_t uid) {
+    auto it = tracks.find(uid);
+    if (it != tracks.end()) {
+        return it->second;
+    }
+    return track_data{{}, -1};
 }
 
 }

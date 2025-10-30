@@ -61,66 +61,12 @@ public: // visible by net objects and the main program
     gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time);
 
     /**
-     *! @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection
-     * @param lat latitude value to convert
-     * @param lon longitude value to convert
-     * @param ref_lat reference latitude mapped at in x:0
-     * @param ref_lon reference longitude mapped at in y:0
-     */
-    vec<2> coord_to_meters(double lat, double lon, double ref_lat, double ref_lon); // private static
-
-    /**
-     *! @brief convert time string from gpx file into time_t value
-     * @param string timestamp given in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
-     */
-    time_t parse_time_t(const std::string &string); // private static
-
-    /**
      *! @brief get the next track point to follow based on the given timestamp
      * @param time current time
      */
     track_point next_point(track_data& td, fcpp::times_t time);
 
-
-    /**
-     *! @brief aggregate function to follow the GPS track assigned to the calling node
-     */
-    template <typename node_t>
-    bool follow_track(node_t &node, trace_t call_point) {
-        auto t = tracks.find(node.uid);
-
-        if (t == tracks.end()) { return false; } //track not found for current node
-
-        track_data& td = t->second;
-
-        if (td.index >= td.track.size() - 1) { return false; } //end of track
-
-        track_point target = next_point(td, node.current_time());
-
-        vec<2> direction = make_vec(target.x, target.y) - node.position();
-
-        double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
-
-        // normalize direction vector
-        direction /= distance;
-
-        double time_left = target.timestamp - node.current_time();
-        double next_time_step = node.next_time() - node.current_time();
-
-        double velocity;
-        if (time_left > next_time_step)
-        {
-            velocity = distance / time_left;
-        }
-        else
-        {
-            velocity = distance / next_time_step;
-        }
-
-        node.velocity() = direction * velocity;
-
-        return true;
-    }
+    track_data find_track(device_t uid);
 
     //! @brief returns the number of saved GPS tracks in the object
     size_t size() const {
@@ -129,6 +75,21 @@ public: // visible by net objects and the main program
 
 private:
     std::unordered_map<device_t, track_data> tracks;
+
+    /**
+     *! @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection
+     * @param lat latitude value to convert
+     * @param lon longitude value to convert
+     * @param ref_lat reference latitude mapped at in x:0
+     * @param ref_lon reference longitude mapped at in y:0
+     */
+    static vec<2> coord_to_meters(double lat, double lon, double ref_lat, double ref_lon);
+
+    /**
+     *! @brief convert time string from gpx file into time_t value
+     * @param string timestamp given in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)
+     */
+    static time_t parse_time_t(const std::string &string);
 };
 
 

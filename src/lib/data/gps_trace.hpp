@@ -56,9 +56,17 @@ public: // visible by net objects and the main program
      * @param ref_lat Reference latitude to be mapped in x:0
      * @param ref_lon Reference longitude to be mapped in y:0
      * @param ref_time Time offset for track timestamps.
-     * @param uid Uid of the node that will follow the track.
      */
-    gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time);
+    gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time);
+
+    /**
+     *! @brief Constructor with direct XML string
+     * @param xml zero-terminated XML string
+     * @param ref_lat Reference latitude to be mapped in x:0
+     * @param ref_lon Reference longitude to be mapped in y:0
+     * @param ref_time Time offset for track timestamps.
+     */
+    gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time);
 
     /**
      *! @brief get the next track point to follow based on the given timestamp
@@ -70,11 +78,20 @@ public: // visible by net objects and the main program
 
     //! @brief returns the number of saved GPS tracks in the object
     size_t size() const {
-        return tracks.size();
+        return m_tracks.size();
     }
 
 private:
-    std::unordered_map<device_t, track_data> tracks;
+    std::unordered_map<device_t, track_data> m_tracks;
+
+    /**
+     *! @brief Initialization method
+     * @param xml zero-terminated XML string
+     * @param ref_lat Reference latitude to be mapped in x:0
+     * @param ref_lon Reference longitude to be mapped in y:0
+     * @param ref_time Time offset for track timestamps.
+     */
+    void init(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time);
 
     /**
      *! @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection

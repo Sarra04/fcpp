@@ -10,9 +10,9 @@
 
 #include <algorithm>
 
+#include "lib/data/gps_trace.hpp"
 #include "lib/coordination/utils.hpp"
 #include "lib/data/vec.hpp"
-#include "lib/data/gps_trace.hpp"
 
 
 /**
@@ -245,8 +245,8 @@ template <typename node_t>
 bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
     track_data td = trace.find_track(node.uid);
 
-    if (td.index == -1) { return false; } //track not found for current node
-    if (td.index >= td.track.size() - 1) { return false; } //end of track
+    if (td.index == -1) return false;  //track not found for current node
+    if (td.index >= td.track.size() - 1) return false; //end of track
 
     track_point target = trace.next_point(td, node.current_time());
 
@@ -254,6 +254,7 @@ bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
 
     double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
 
+    if (distance == 0) return true; 
     // normalize direction vector
     direction /= distance;
 
@@ -261,12 +262,9 @@ bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
     double next_time_step = node.next_time() - node.current_time();
 
     double velocity;
-    if (time_left > next_time_step)
-    {
+    if (time_left > next_time_step) {
         velocity = distance / time_left;
-    }
-    else
-    {
+    } else {
         velocity = distance / next_time_step;
     }
 
@@ -274,6 +272,9 @@ bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
 
     return true;
 }
+
+//! @brief Export list for follow_track.
+using follow_track_t = common::export_list<>;
 
 }
 

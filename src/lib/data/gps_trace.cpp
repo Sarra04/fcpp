@@ -4,30 +4,33 @@ static constexpr double EARTH_RADIUS = 6371000.0;
 
 namespace fcpp {
 
-gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time) {
+gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time) {
     std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
-        throw std::runtime_error("Failed to open GPX file: " + src_gpx_file);
+        throw std::runtime_error(std::string("Failed to open GPX file: ") + src_gpx_file);
     }
 
-    // Save file to string stream for processing
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    std::string content = buffer.str();
+    std::string xml((std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>()));
     file.close();
 
+    this->init(xml, ref_lat, ref_lon, ref_time);
+}
+
+gps_trace::gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time) {
+    this->init(xml, ref_lat, ref_lon, ref_time);
+}
+
+
+void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time) {
     times_t start_time = 0.0;
     device_t track_id = 0;
     vec<2> pos;
 
     try {
         rapidxml::xml_document<> doc;
-        doc.parse<0>(&content[0]);
-
+        doc.parse<0>(&xml[0]);
         rapidxml::xml_node<> *gpx_node = doc.first_node("gpx");
-        if (!gpx_node) {
-            throw std::runtime_error("Failed to find gpx node in file: " + src_gpx_file);
-        }
+        if (!gpx_node) throw std::runtime_error("Failed to find gpx node");
 
         for (rapidxml::xml_node<> *trk_node = gpx_node->first_node("trk"); trk_node; trk_node = trk_node->next_sibling("trk")) {
             
@@ -45,9 +48,7 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
                         double gps_lat = std::stod(lat->value());
                         double gps_lon = std::stod(lon->value());
 
-                        if (track.empty()) { // first node entered
-                            start_time = static_cast<times_t>(parse_time_t(time_node->value()));
-                        }
+                        if (track.empty()) start_time = static_cast<times_t>(parse_time_t(time_node->value())); // first node entered
 
                         pos = coord_to_meters(gps_lat, gps_lon, ref_lat, ref_lon);
 
@@ -61,7 +62,7 @@ gps_trace::gps_trace(const std::string &src_gpx_file, const double ref_lat, cons
                 }
             }
 
-            tracks[track_id] = {track, 0};
+            m_tracks[track_id] = {track, 0};
             track_id++;
         }
     }
@@ -104,8 +105,8 @@ time_t gps_trace::parse_time_t(const std::string &string) {
 track_point gps_trace::next_point(track_data& td, fcpp::times_t time) {
     track_point& tp = td.track[td.index];
 
-    if(tp.timestamp < time && td.index < td.track.size() - 1) {
-        td.index ++;
+    while(tp.timestamp < time && td.index < td.track.size() - 1) {
+        td.index += 1;
         tp = td.track[td.index];
     }
 
@@ -113,10 +114,8 @@ track_point gps_trace::next_point(track_data& td, fcpp::times_t time) {
 }
 
 track_data gps_trace::find_track(device_t uid) {
-    auto it = tracks.find(uid);
-    if (it != tracks.end()) {
-        return it->second;
-    }
+    auto it = m_tracks.find(uid);
+    if (it != m_tracks.end()) return it->second;
     return track_data{{}, -1};
 }
 

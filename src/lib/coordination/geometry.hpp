@@ -240,15 +240,23 @@ inline typename node_t::position_type neighbour_charged_force(node_t& node, trac
 //! @brief Export list for neighbour_charged_force.
 using neighbour_charged_force_t = common::export_list<real_t>;
 
-//! @brief Aggregate function to follow the GPS track assigned to the calling node
+/**
+ * !@brief Aggregate function to follow the GPS track assigned to the calling node
+ * Returns false if no track is found for the calling node or it has reached the end of it's track.
+ * When a track is finished it's index is reset to 0.
+*/
 template <typename node_t>
 bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
     track_data td = trace.find_track(node.uid);
 
     if (td.index == -1) return false;  //track not found for current node
-    if (td.index >= td.track.size() - 1) return false; //end of track
 
     track_point target = trace.next_point(td, node.current_time());
+
+    if (td.index >= td.track.size()) { //end of track
+        td.index = 0;
+        return false; 
+    }
 
     vec<2> direction = make_vec(target.x, target.y) - node.position();
 

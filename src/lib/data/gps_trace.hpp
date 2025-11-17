@@ -70,11 +70,16 @@ public: // visible by net objects and the main program
 
     /**
      *! @brief get the next track point to follow based on the given timestamp
+     * @param td track_data struct with the GPS trace to search
      * @param time current time
      */
-    track_point next_point(track_data& td, fcpp::times_t time);
+    track_point& next_point(track_data& td, fcpp::times_t time);
 
-    track_data find_track(device_t uid);
+    /**
+     *! @brief returns the GPS trace associated with the device id given
+     * @param uid device identifier
+     */
+    track_data& find_track(device_t uid);
 
     //! @brief returns the number of saved GPS tracks in the object
     size_t size() const {
@@ -85,7 +90,7 @@ private:
     std::unordered_map<device_t, track_data> m_tracks;
 
     /**
-     *! @brief Initialization method
+     *! @brief Initialization method, called by the constructors to parse an XML string
      * @param xml zero-terminated XML string
      * @param ref_lat Reference latitude to be mapped in x:0
      * @param ref_lon Reference longitude to be mapped in y:0

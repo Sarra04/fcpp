@@ -6,7 +6,7 @@ namespace fcpp {
 
 static track_data s_empty_track{{}, -1};
 
-gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time) {
+gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
     std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
         throw std::runtime_error(std::string("Failed to open GPX file: ") + src_gpx_file);
@@ -15,15 +15,15 @@ gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const doubl
     std::string xml((std::istreambuf_iterator<char>(file)), (std::istreambuf_iterator<char>()));
     file.close();
 
-    this->init(xml, ref_lat, ref_lon, ref_time);
+    this->init(xml, ref_lat, ref_lon, ref_ele, ref_time);
 }
 
-gps_trace::gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time) {
-    this->init(xml, ref_lat, ref_lon, ref_time);
+gps_trace::gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
+    this->init(xml, ref_lat, ref_lon, ref_ele, ref_time);
 }
 
 
-void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time) {
+void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
     times_t start_time = 0.0;
     device_t track_id = 0;
     vec<2> pos;
@@ -44,6 +44,7 @@ void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lo
 
                     rapidxml::xml_attribute<> *lat = trkpt_node->first_attribute("lat");
                     rapidxml::xml_attribute<> *lon = trkpt_node->first_attribute("lon");
+                    rapidxml::xml_node<> *ele_node = trkpt_node->first_node("ele");
                     rapidxml::xml_node<> *time_node = trkpt_node->first_node("time");
 
                     if (lat && lon && time_node) {
@@ -58,7 +59,8 @@ void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lo
                         point.x = pos[0];
                         point.y = pos[1];
                         point.timestamp = static_cast<times_t>(parse_time_t(time_node->value())) - start_time + ref_time;
-
+                        ele_node ? point.z = std::stod(ele_node->value()) - ref_ele : point.z = 0.0;
+                        
                         track.push_back(point);
                     }
                 }

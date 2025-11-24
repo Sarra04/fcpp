@@ -38,7 +38,7 @@ TEST(GpsTraceTest, Parsing) {
 
     times_t ref_time = 10;
 
-    static gps_trace trace(gpx_data, 47.86675, 15.16357, ref_time);
+    static gps_trace trace(gpx_data, 47.86675, 15.16357, 833.15, ref_time);
 
     EXPECT_EQ(trace.size(), 2);
 
@@ -53,9 +53,11 @@ TEST(GpsTraceTest, Parsing) {
     //check track points values to verify correct conversions
     EXPECT_EQ(td_a.track[0].x, 0);
     EXPECT_EQ(td_a.track[0].y, 0);
+    EXPECT_EQ(td_a.track[0].z, 0);
     EXPECT_EQ(td_a.track[0].timestamp, ref_time);
     EXPECT_LT(td_a.track[1].x, 0.0);
     EXPECT_GT(td_a.track[1].y, 0.0);
+    EXPECT_GT(td_a.track[1].z, 0.0);
     EXPECT_GT(td_a.track[1].timestamp, td_a.track[0].timestamp);
 }
 
@@ -80,7 +82,7 @@ TEST(GpsTraceTest, Navigation) {
   </trk>
 </gpx>)");
 
-    static gps_trace trace(gpx_data, 47.86675, 15.16357, 10);
+    static gps_trace trace(gpx_data, 47.86675, 15.16357, 833.15, 10);
 
     EXPECT_EQ(trace.size(), 1);
 
@@ -100,7 +102,7 @@ TEST(GpsTraceTest, InvalidGpx) {
     std::string invalid_gpx = "Lorem Ipsum";
     
     EXPECT_THROW({
-        gps_trace trace(invalid_gpx, 0.0, 0.0, 0.0);
+        gps_trace trace(invalid_gpx, 0.0, 0.0, 0.0, 0.0);
     }, std::runtime_error);
 }
 
@@ -109,6 +111,6 @@ TEST(GpsTraceTest, EmptyGpx) {
 <gpx>
 </gpx>)";
     
-    gps_trace trace(empty_gpx, 0.0, 0.0, 0.0);
+    gps_trace trace(empty_gpx, 0.0, 0.0, 0.0, 0.0);
     EXPECT_EQ(trace.size(), 0);
 }

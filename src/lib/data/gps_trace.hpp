@@ -33,6 +33,7 @@ struct track_point
 {
     double x;
     double y;
+    double z;
     times_t timestamp;
 };
 
@@ -57,7 +58,7 @@ public: // visible by net objects and the main program
      * @param ref_lon Reference longitude to be mapped in y:0
      * @param ref_time Time offset for track timestamps.
      */
-    gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const times_t ref_time);
+    gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time);
 
     /**
      *! @brief Constructor with direct XML string
@@ -66,7 +67,7 @@ public: // visible by net objects and the main program
      * @param ref_lon Reference longitude to be mapped in y:0
      * @param ref_time Time offset for track timestamps.
      */
-    gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time);
+    gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time);
 
     /**
      *! @brief get the next track point to follow based on the given timestamp
@@ -96,7 +97,7 @@ private:
      * @param ref_lon Reference longitude to be mapped in y:0
      * @param ref_time Time offset for track timestamps.
      */
-    void init(std::string &xml, const double ref_lat, const double ref_lon, const times_t ref_time);
+    void init(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time);
 
     /**
      *! @brief conversion of a geographic coordinates to projected coordinates using equirectangular projection

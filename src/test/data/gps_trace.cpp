@@ -1,3 +1,5 @@
+// Copyright © 2025 Lorenzo Framarin and Giorgio Audrito. All Rights Reserved.
+
 #include "gtest/gtest.h"
 #include "lib/data/gps_trace.hpp"
 #include <string>

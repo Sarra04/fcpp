@@ -1,12 +1,20 @@
+// Copyright © 2025 Lorenzo Framarin and Giorgio Audrito. All Rights Reserved.
+
 #include "gps_trace.hpp"
 
-static constexpr double EARTH_RADIUS = 6371000.0;
 
+/**
+ * @brief Namespace containing all the objects in the FCPP library.
+ */
 namespace fcpp {
+
+
+static constexpr real_t EARTH_RADIUS = 6371000.0;
 
 static track_data s_empty_track{{}, -1};
 
-gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
+
+gps_trace::gps_trace(const char* src_gpx_file, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time) {
     std::ifstream file(src_gpx_file);
     if (!file.is_open()) {
         throw std::runtime_error(std::string("Failed to open GPX file: ") + src_gpx_file);
@@ -18,12 +26,11 @@ gps_trace::gps_trace(const char* src_gpx_file, const double ref_lat, const doubl
     this->init(xml, ref_lat, ref_lon, ref_ele, ref_time);
 }
 
-gps_trace::gps_trace(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
+gps_trace::gps_trace(std::string &xml, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time) {
     this->init(xml, ref_lat, ref_lon, ref_ele, ref_time);
 }
 
-
-void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lon, const double ref_ele, const times_t ref_time) {
+void gps_trace::init(std::string &xml, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time) {
     times_t start_time = 0.0;
     device_t track_id = 0;
     vec<2> pos;
@@ -48,8 +55,8 @@ void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lo
                     rapidxml::xml_node<> *time_node = trkpt_node->first_node("time");
 
                     if (lat && lon && time_node) {
-                        double gps_lat = std::stod(lat->value());
-                        double gps_lon = std::stod(lon->value());
+                        real_t gps_lat = std::stod(lat->value());
+                        real_t gps_lon = std::stod(lon->value());
 
                         if (track.empty()) start_time = static_cast<times_t>(parse_time_t(time_node->value())); // first node entered
 
@@ -78,13 +85,13 @@ void gps_trace::init(std::string &xml, const double ref_lat, const double ref_lo
     }
 };
 
-vec<2> gps_trace::coord_to_meters(double lat, double lon, double ref_lat, double ref_lon) {
-    double ref_lat_rad = ref_lat * M_PI / 180.0;
-    double d_lat = (lat - ref_lat) * M_PI / 180.0;
-    double d_lon = (lon - ref_lon) * M_PI / 180.0;
+vec<2> gps_trace::coord_to_meters(real_t lat, real_t lon, real_t ref_lat, real_t ref_lon) {
+    real_t ref_lat_rad = ref_lat * M_PI / 180;
+    real_t d_lat = (lat - ref_lat) * M_PI / 180;
+    real_t d_lon = (lon - ref_lon) * M_PI / 180;
 
-    double x = EARTH_RADIUS * std::cos(ref_lat_rad) * d_lon;
-    double y = EARTH_RADIUS * d_lat;
+    real_t x = EARTH_RADIUS * std::cos(ref_lat_rad) * d_lon;
+    real_t y = EARTH_RADIUS * d_lat;
 
     return make_vec(x, y);
 }
@@ -124,4 +131,5 @@ track_data& gps_trace::find_track(device_t uid) {
     return s_empty_track;
 }
 
-}
+
+} // namespace fcpp

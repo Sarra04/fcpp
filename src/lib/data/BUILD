@@ -31,6 +31,18 @@ cc_library(
 )
 
 cc_library(
+    name = 'gps_trace',
+    hdrs = ['gps_trace.hpp'],
+    srcs = ['gps_trace.cpp'],
+    deps = [
+        "//lib/data:vec",
+    ],
+    visibility = [
+        '//visibility:public',
+    ],
+)
+
+cc_library(
     name = "hyperloglog",
     hdrs = ["hyperloglog.hpp"],
     srcs = ["hyperloglog.cpp"],

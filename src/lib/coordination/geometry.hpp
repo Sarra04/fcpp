@@ -71,46 +71,22 @@ using follow_path_t = common::export_list<size_t>;
 
 /**
  * @brief Follows the GPS track assigned to the calling node.
- * @returns false if no track is found for the calling node, or it has reached the end of it's track (when a track is finished its index is reset to 0).
+ * @returns false when the track has finished.
  */
 template <typename node_t>
 bool follow_track(node_t &node, trace_t call_point, gps_trace& trace) {
-    track_data td = trace.find_track(node.uid);
-
-    if (td.index == -1) return false;  //track not found for current node
-
-    track_point target = trace.next_point(td, node.current_time());
-
-    if (td.index >= td.track.size()) { //end of track
-        td.index = 0;
-        return false;
-    }
-
-    vec<2> direction = make_vec(target.x, target.y) - node.position();
-
-    double distance = std::sqrt(std::pow(direction[0], 2) + std::pow(direction[1], 2));
-
-    if (distance == 0) return true;
-    // normalize direction vector
-    direction /= distance;
-
-    double time_left = target.timestamp - node.current_time();
-    double next_time_step = node.next_time() - node.current_time();
-
-    double velocity;
-    if (time_left > next_time_step) {
-        velocity = distance / time_left;
-    } else {
-        velocity = distance / next_time_step;
-    }
-
-    node.velocity() = direction * velocity;
-
-    return true;
+    return old(node, call_point, size_t{0}, [&](size_t i){
+        times_t nt = node.next_time();
+        times_t ct = node.current_time();
+        if (ct >= nt) return i;
+        auto v = trace.next_point(node.uid, i, nt, ct, node.position());
+        node.velocity() = (std::move(v) - node.position()) / (nt - ct);
+        return i;
+    }) < (size_t)-1;
 }
 
 //! @brief Export list for follow_track.
-using follow_track_t = common::export_list<>;
+using follow_track_t = common::export_list<size_t>;
 
 
 //! @cond INTERNAL

@@ -44,23 +44,23 @@ TEST(GpsTraceTest, Parsing) {
 
     EXPECT_EQ(trace.size(), 2);
 
-    track_data& td_a = trace.find_track(0);
-    track_data& td_b = trace.find_track(1);
+    std::vector<track_point> const& td_a = trace.find_track(0);
+    std::vector<track_point> const& td_b = trace.find_track(1);
 
-    ASSERT_FALSE(td_a.track.empty());
-    ASSERT_FALSE(td_b.track.empty());
-    EXPECT_EQ(td_a.track.size(), 3);
-    EXPECT_EQ(td_b.track.size(), 2);
+    ASSERT_FALSE(td_a.empty());
+    ASSERT_FALSE(td_b.empty());
+    EXPECT_EQ(td_a.size(), 3);
+    EXPECT_EQ(td_b.size(), 2);
 
     //check track points values to verify correct conversions
-    EXPECT_EQ(td_a.track[0].x, 0);
-    EXPECT_EQ(td_a.track[0].y, 0);
-    EXPECT_EQ(td_a.track[0].z, 0);
-    EXPECT_EQ(td_a.track[0].timestamp, ref_time);
-    EXPECT_LT(td_a.track[1].x, 0.0);
-    EXPECT_GT(td_a.track[1].y, 0.0);
-    EXPECT_GT(td_a.track[1].z, 0.0);
-    EXPECT_GT(td_a.track[1].timestamp, td_a.track[0].timestamp);
+    EXPECT_EQ(td_a[0].x, 0);
+    EXPECT_EQ(td_a[0].y, 0);
+    EXPECT_EQ(td_a[0].z, 0);
+    EXPECT_EQ(td_a[0].timestamp, ref_time);
+    EXPECT_LT(td_a[1].x, 0.0);
+    EXPECT_GT(td_a[1].y, 0.0);
+    EXPECT_GT(td_a[1].z, 0.0);
+    EXPECT_GT(td_a[1].timestamp, td_a[0].timestamp);
 }
 
 TEST(GpsTraceTest, Navigation) {
@@ -88,16 +88,15 @@ TEST(GpsTraceTest, Navigation) {
 
     EXPECT_EQ(trace.size(), 1);
 
-    track_data& td = trace.find_track(0);
-    ASSERT_FALSE(td.track.empty());
+    EXPECT_EQ(trace.find_track(0).size(), 3);
 
-    track_point& pt1 = trace.next_point(td, 0.0);
-    EXPECT_EQ(td.index, 0);
-    track_point& pt2 = trace.next_point(td, 30.0);
-    EXPECT_EQ(td.index, 1);
-    // When going past the last trackpoint the index becomes equal to track.size() to be reset in follow_track()
-    track_point& pt3 = trace.next_point(td, 100.0);
-    EXPECT_EQ(td.index, 3);
+    size_t index = 0;
+    trace.next_point(0, index, 5, 0, make_vec(0,0));
+    EXPECT_EQ(index, 0);
+    trace.next_point(0, index, 30, 5, make_vec(0,0));
+    EXPECT_EQ(index, 1);
+    trace.next_point(0, index, 100, 30, make_vec(0,0));
+    EXPECT_EQ(index, (size_t)-1);
 }
 
 TEST(GpsTraceTest, InvalidGpx) {

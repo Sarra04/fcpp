@@ -2,6 +2,17 @@
 
 #include "gps_trace.hpp"
 
+#define _USE_MATH_DEFINES
+#include <ctime>
+#include <cmath>
+
+#include <algorithm>
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+
+#include "../../external/rapidxml-1.13/rapidxml.hpp"
+
 
 /**
  * @brief Namespace containing all the objects in the FCPP library.
@@ -10,8 +21,6 @@ namespace fcpp {
 
 
 static constexpr real_t EARTH_RADIUS = 6371000.0;
-
-static track_data s_empty_track{{}, -1};
 
 
 gps_trace::gps_trace(const char* src_gpx_file, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time) {
@@ -73,7 +82,7 @@ void gps_trace::init(std::string &xml, const real_t ref_lat, const real_t ref_lo
                 }
             }
 
-            m_tracks[track_id] = {track, 0};
+            m_tracks[track_id] = track;
             track_id++;
         }
     }
@@ -113,22 +122,8 @@ time_t gps_trace::parse_time_t(const std::string &string) {
     return mktime(&tm);
 }
 
-track_point& gps_trace::next_point(track_data& td, fcpp::times_t time) {
-    track_point& tp = td.track[td.index];
-
-    while(tp.timestamp < time) {
-        td.index += 1;
-        if(td.index >= td.track.size()) return tp;
-        tp = td.track[td.index];
-    }
-
-    return tp;
-}
-
-track_data& gps_trace::find_track(device_t uid) {
-    auto it = m_tracks.find(uid);
-    if (it != m_tracks.end()) return it->second;
-    return s_empty_track;
+std::vector<track_point> const& gps_trace::find_track(device_t uid) {
+    return m_tracks[uid];
 }
 
 

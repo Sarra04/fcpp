@@ -8,23 +8,11 @@
 #ifndef FCPP_DATA_GPS_TRACE_HPP
 #define FCPP_DATA_GPS_TRACE_HPP
 
-#define _USE_MATH_DEFINES
-#include <cmath>
-
 #include <string>
-#include <vector>
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <ostream>
 #include <unordered_map>
-#include <ctime>
-#include <cmath>
-#include <algorithm>
+#include <vector>
 
 #include "lib/data/vec.hpp"
-
-#include "../../external/rapidxml-1.13/rapidxml.hpp"
 
 
 /**
@@ -43,14 +31,16 @@ struct track_point {
     real_t z;
     //! @brief time coordinate.
     times_t timestamp;
-};
 
-//! @brief GPS track and index for navigation.
-struct track_data {
-    //! @brief Time-ordered sequence of track points.
-    std::vector<track_point> track;
-    //! @brief Index of the current track point.
-    int index;
+    //! @brief Conversion to 2D vector.
+    inline explicit operator vec<2>() const {
+        return make_vec(x,y);
+    }
+
+    //! @brief Conversion to 3D vector.
+    inline explicit operator vec<3>() const {
+        return make_vec(x,y,z);
+    }
 };
 
 /**
@@ -83,13 +73,38 @@ class gps_trace {
 
     /**
      * @brief Next track point to follow based on the given timestamp.
-     * @param td track_data struct with the GPS trace to search.
-     * @param time current time.
+     *
+     * Assumes that index is either valid, 0 or -1.
+     *
+     * @param uid the device uid.
+     * @param index the start of the sub-track to consider.
+     * @param next the time of the next round.
+     * @param cur the time of the current round.
+     * @param def the current position.
      */
-    track_point& next_point(track_data& td, fcpp::times_t time);
+    template <size_t n>
+    vec<n> next_point(device_t uid, size_t& index, times_t next, times_t cur, vec<n> def) const {
+        auto track = m_tracks.find(uid);
+        if (track == m_tracks.end()) {
+            index = (size_t)-1;
+            return def;
+        }
+        for (; index < track->second.size() and track->second[index].timestamp < next; ++index);
+        if (index >= track->second.size()) {
+            index = (size_t)-1;
+            return vec<n>(track->second.back());
+        }
+        if (track->second[index].timestamp == next)
+            return vec<n>(track->second[index]);
+        vec<n> vpre = index == 0 ? def : vec<n>(track->second[index-1]);
+        vec<n> vpost = vec<n>(track->second[index]);
+        real_t tpre = index == 0 ? cur : track->second[index-1].timestamp;
+        real_t tpost = track->second[index].timestamp;
+        return (vpre*(tpost-next) + vpost*(next-tpre))/(tpost-tpre);
+    }
 
     //! @brief GPS trace associated with the given device id.
-    track_data& find_track(device_t uid);
+    std::vector<track_point> const& find_track(device_t uid);
 
     //! @brief Number of saved GPS tracks in the object.
     size_t size() const {
@@ -98,7 +113,7 @@ class gps_trace {
 
   private:
     //! @brief The stored GPS tracks.
-    std::unordered_map<device_t, track_data> m_tracks;
+    std::unordered_map<device_t, std::vector<track_point>> m_tracks;
 
     /**
      * @brief Initialization method, called by the constructors to parse an XML string.

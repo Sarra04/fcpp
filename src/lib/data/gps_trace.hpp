@@ -52,24 +52,40 @@ class gps_trace {
     gps_trace() = default;
 
     /**
-     * @brief Main constructor.
+     * @brief Constructor from a GPX file path.
+     *
      * @param src_gpx_file path of the gpx file to load.
-     * @param ref_lat reference latitude to be mapped in x = 0.
-     * @param ref_lon reference longitude to be mapped in y = 0.
-     * @param ref_ele reference elevation to be mapped in z = 0.
-     * @param ref_time time offset for track timestamps.
+     * @param ref_uid starting device id to use for new tracks.
+     * @param ref_lat reference latitude to be mapped to x = 0.
+     * @param ref_lon reference longitude to be mapped to y = 0.
+     * @param ref_ele reference elevation to be mapped to z = 0.
+     * @param ref_time reference time to be mapped to t = 0.
      */
-    gps_trace(const char* src_gpx_file, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time);
+    gps_trace(const char* src_gpx_file, device_t ref_uid, real_t ref_lat, real_t ref_lon, real_t ref_ele, std::string const& ref_time);
 
     /**
-     * @brief Constructor with direct XML string.
-     * @param xml zero-terminated XML string.
-     * @param ref_lat reference latitude to be mapped in x = 0.
-     * @param ref_lon reference longitude to be mapped in y = 0.
-     * @param ref_ele reference elevation to be mapped in z = 0.
-     * @param ref_time time offset for track timestamps.
+     * @brief Constructor from an XML string.
+     *
+     * @param xml XML string.
+     * @param ref_uid starting device id to use for new tracks.
+     * @param ref_lat reference latitude to be mapped to x = 0.
+     * @param ref_lon reference longitude to be mapped to y = 0.
+     * @param ref_ele reference elevation to be mapped to z = 0.
+     * @param ref_time reference time to be mapped to t = 0.
      */
-    gps_trace(std::string &xml, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time);
+    gps_trace(std::string &xml, device_t ref_uid, real_t ref_lat, real_t ref_lon, real_t ref_ele, std::string const& ref_time);
+
+    /**
+     * @brief Load tracks from an XML string.
+     *
+     * @param xml XML string.
+     * @param ref_uid starting device id to use for new tracks.
+     * @param ref_lat reference latitude to be mapped to x = 0.
+     * @param ref_lon reference longitude to be mapped to y = 0.
+     * @param ref_ele reference elevation to be mapped to z = 0.
+     * @param ref_time reference time to be mapped to t = 0.
+     */
+    void load(std::string &xml, device_t ref_uid, real_t ref_lat, real_t ref_lon, real_t ref_ele, std::string const& ref_time);
 
     /**
      * @brief Next track point to follow based on the given timestamp.
@@ -115,30 +131,14 @@ class gps_trace {
     //! @brief The stored GPS tracks.
     std::unordered_map<device_t, std::vector<track_point>> m_tracks;
 
-    /**
-     * @brief Initialization method, called by the constructors to parse an XML string.
-     * @param xml zero-terminated XML string.
-     * @param ref_lat reference latitude to be mapped in x = 0.
-     * @param ref_lon reference longitude to be mapped in y = 0.
-     * @param ref_ele reference elevation to be mapped in z = 0.
-     * @param ref_time time offset for track timestamps.
-     */
-    void init(std::string &xml, const real_t ref_lat, const real_t ref_lon, const real_t ref_ele, const times_t ref_time);
+    //! @brief Conversion of geographic coordinates to projected coordinates using equirectangular projection.
+    static track_point coord_to_meters(real_t lat, real_t lon, real_t ref_lat, real_t ref_lon);
 
     /**
-     * @brief Conversion of geographic coordinates to projected coordinates using equirectangular projection.
-     * @param lat latitude value to convert.
-     * @param lon longitude value to convert.
-     * @param ref_lat reference latitude mapped to x = 0.
-     * @param ref_lon reference longitude mapped to y = 0.
-     */
-    static vec<2> coord_to_meters(real_t lat, real_t lon, real_t ref_lat, real_t ref_lon);
-
-    /**
-     * @brief Converts a time string from gpx file into a `time_t` value.
+     * @brief Converts a time string from gpx file into a `times_t` value.
      * @param string timestamp given in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ).
      */
-    static time_t parse_time_t(const std::string &string);
+    static times_t parse_time(std::string const& string);
 };
 
 

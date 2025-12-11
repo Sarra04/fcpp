@@ -1,8 +1,10 @@
 // Copyright © 2025 Lorenzo Framarin and Giorgio Audrito. All Rights Reserved.
 
 #include "gtest/gtest.h"
+
 #include "lib/data/gps_trace.hpp"
-#include <string>
+
+#include "../../external/rapidxml-1.13/rapidxml.hpp"
 
 
 using namespace fcpp;
@@ -38,9 +40,7 @@ TEST(GpsTraceTest, Parsing) {
   </trk>
 </gpx>)");
 
-    times_t ref_time = 10;
-
-    static gps_trace trace(gpx_data, 47.86675, 15.16357, 833.15, ref_time);
+    static gps_trace trace(gpx_data, 0, 47.86675, 15.16357, 833.15, "2018-05-21T04:51:00Z");
 
     EXPECT_EQ(trace.size(), 2);
 
@@ -56,11 +56,11 @@ TEST(GpsTraceTest, Parsing) {
     EXPECT_EQ(td_a[0].x, 0);
     EXPECT_EQ(td_a[0].y, 0);
     EXPECT_EQ(td_a[0].z, 0);
-    EXPECT_EQ(td_a[0].timestamp, ref_time);
+    EXPECT_EQ(td_a[0].timestamp, 34);
     EXPECT_LT(td_a[1].x, 0.0);
     EXPECT_GT(td_a[1].y, 0.0);
     EXPECT_GT(td_a[1].z, 0.0);
-    EXPECT_GT(td_a[1].timestamp, td_a[0].timestamp);
+    EXPECT_EQ(td_a[1].timestamp, 74);
 }
 
 TEST(GpsTraceTest, Navigation) {
@@ -84,18 +84,20 @@ TEST(GpsTraceTest, Navigation) {
   </trk>
 </gpx>)");
 
-    static gps_trace trace(gpx_data, 47.86675, 15.16357, 833.15, 10);
+    static gps_trace trace(gpx_data, 0, 47.86675, 15.16357, 833.15, "2018-05-21T04:51:00Z");
 
     EXPECT_EQ(trace.size(), 1);
 
     EXPECT_EQ(trace.find_track(0).size(), 3);
 
     size_t index = 0;
-    trace.next_point(0, index, 5, 0, make_vec(0,0));
+    trace.next_point(0, index, 30, 0, make_vec(0,0));
     EXPECT_EQ(index, 0);
-    trace.next_point(0, index, 30, 5, make_vec(0,0));
+    trace.next_point(0, index, 60, 30, make_vec(0,0));
     EXPECT_EQ(index, 1);
-    trace.next_point(0, index, 100, 30, make_vec(0,0));
+    trace.next_point(0, index, 74, 30, make_vec(0,0));
+    EXPECT_EQ(index, 1);
+    trace.next_point(0, index, 200, 30, make_vec(0,0));
     EXPECT_EQ(index, (size_t)-1);
 }
 
@@ -103,8 +105,8 @@ TEST(GpsTraceTest, InvalidGpx) {
     std::string invalid_gpx = "Lorem Ipsum";
     
     EXPECT_THROW({
-        gps_trace trace(invalid_gpx, 0.0, 0.0, 0.0, 0.0);
-    }, std::runtime_error);
+        gps_trace trace(invalid_gpx, 0, 0.0, 0.0, 0.0, "2018-05-21T04:51:00Z");
+    }, rapidxml::parse_error);
 }
 
 TEST(GpsTraceTest, EmptyGpx) {
@@ -112,6 +114,6 @@ TEST(GpsTraceTest, EmptyGpx) {
 <gpx>
 </gpx>)";
     
-    gps_trace trace(empty_gpx, 0.0, 0.0, 0.0, 0.0);
+    gps_trace trace(empty_gpx, 0, 0.0, 0.0, 0.0, "2018-05-21T04:51:00Z");
     EXPECT_EQ(trace.size(), 0);
 }

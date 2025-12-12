@@ -10,8 +10,8 @@
 
 #include <algorithm>
 
-#include "lib/data/gps_trace.hpp"
 #include "lib/coordination/utils.hpp"
+#include "lib/data/gps_trace.hpp"
 #include "lib/data/vec.hpp"
 
 
@@ -263,8 +263,6 @@ using neighbour_charged_force_t = common::export_list<real_t>;
 
 } // namespace coordination
 
-
 } // namespace fcpp
-
 
 #endif // FCPP_COORDINATION_GEOMETRY_H_

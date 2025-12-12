@@ -90,6 +90,7 @@ cc_library(
         "//lib/data:bloom",
         "//lib/data:color",
         "//lib/data:field",
+        "//lib/data:gps_trace",
         "//lib/data:hyperloglog",
         "//lib/data:ordered",
         "//lib/data:shape",

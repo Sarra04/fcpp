@@ -166,6 +166,7 @@ set(
     lib/data/bloom.cpp
     lib/data/color.cpp
     lib/data/field.cpp
+    lib/data/gps_trace.cpp
     lib/data/hyperloglog.cpp
     lib/data/ordered.cpp
     lib/data/shape.cpp
@@ -228,6 +229,7 @@ add_library(
         stb_image
         ./external/stb_image/stb_image.h
         ./external/stb_image/stb_image.cpp
+        ./external/rapidxml-1.13/rapidxml.hpp
 )
 target_include_directories(stb_image PUBLIC ./external/stb_image)
 if(FCPP_BUILD_MPI)
@@ -353,6 +355,7 @@ if(FCPP_BUILD_TESTS)
         fcpp_test(test/data/bloom.cpp)
         fcpp_test(test/data/color.cpp)
         fcpp_test(test/data/field.cpp)
+        fcpp_test(test/data/gps_trace.cpp)
         fcpp_test(test/data/hyperloglog.cpp)
         fcpp_test(test/data/ordered.cpp)
         fcpp_test(test/data/tuple.cpp)

@@ -887,7 +887,7 @@ namespace details {
  * @tparam S the tag of the aggregator column (e.g. `aggregator::mean<tags::data>`)
  * @tparam A the aggregator to be used (defaults to `mean<double>`, use `stats<double>` to show error bars)
  */
-template <typename S, typename A = aggregator::only_finite<aggregator::mean<double>>>
+template <typename S, typename A = aggregator::mean<double>>
 class value {
   public:
     //! @brief The internal build type.
@@ -1090,7 +1090,7 @@ namespace details {
     };
     //! @brief Maintains values for multiple explicit columns and no aggregators (defaults to `mean<double>`).
     template <typename S, template<class...> class A>
-    struct values<S, A<>> : public values<S, A<aggregator::only_finite<aggregator::mean<double>>>> {};
+    struct values<S, A<>> : public values<S, A<aggregator::mean<double>>> {};
     //! @brief Maintains values for multiple explicit columns and multiple aggregators.
     template <typename S, template<class...> class A, typename A1, typename... As>
     struct values<S, A<A1, As...>> : public joiner<typename values<S, A<A1>>::type, typename values<S, A<As>>::type...> {};

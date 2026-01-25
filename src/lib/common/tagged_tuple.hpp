@@ -410,8 +410,8 @@ using tagged_tuple_t = typename details::tagged_tuple_t<Ts...>::type;
 
 //! @brief Utility function for creating tagged tuples by interleaving tags and values.
 template <typename... Ts>
-tagged_tuple_t<Ts...> make_tagged_tuple_t(Ts&&... vs) {
-    tagged_tuple_t<Ts...> t;
+tagged_tuple_t<std::decay_t<Ts>...> make_tagged_tuple_t(Ts&&... vs) {
+    tagged_tuple_t<std::decay_t<Ts>...> t;
     details::make_tagged_tuple_t(t, std::forward<Ts>(vs)...);
     return t;
 }

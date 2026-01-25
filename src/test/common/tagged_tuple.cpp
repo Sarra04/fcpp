@@ -193,8 +193,9 @@ TEST_F(TaggedTupleTest, Print) {
 
 TEST_F(TaggedTupleTest, TupleCat) {
     EXPECT_SAME(common::tagged_tuple_cat<common::tagged_tuple_t<tag,int,gat,bool>, common::tagged_tuple_t<oth,double,hto,char>>, common::tagged_tuple_t<tag,int,gat,bool,oth,double,hto,char>);
+    int x = 10;
     auto y = common::make_tagged_tuple_t(
-        tag{}, 10,
+        tag{}, x,
         gat{}, true,
         oth{}, 0.5,
         hto{}, 'a'

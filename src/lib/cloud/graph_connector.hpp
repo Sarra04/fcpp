@@ -176,18 +176,20 @@ struct graph_connector {
                 times_t t = m_send;
                 times_t pt = P::node::next();
                 if (t < pt) {
-                    PROFILE_COUNT("graph_connector");
-                    PROFILE_COUNT("graph_connector/send");
-                    m_send = TIME_MAX;
-                    typename F::node::message_t m;
-                    P::node::as_final().send(t, m);
-                    P::node::as_final().receive(t, P::node::uid, m);
-                    common::unlock_guard<parallel> u(P::node::mutex);
-                    for (std::pair<device_t, typename F::node*> p : m_neighbours.first()) {
-                        typename F::node *n = p.second;
-                        if (n != this) {
-                            common::lock_guard<parallel> l(n->mutex);
-                            n->receive(t, P::node::uid, m);
+                    PROFILE_COUNT("connector");
+                    {
+                        PROFILE_COUNT("connector/send");
+                        m_send = TIME_MAX;
+                        typename F::node::message_t m;
+                        P::node::as_final().send(t, m);
+                        P::node::as_final().receive(t, P::node::uid, m);
+                        common::unlock_guard<parallel> u(P::node::mutex);
+                        for (std::pair<device_t, typename F::node*> p : m_neighbours.first()) {
+                            typename F::node *n = p.second;
+                            if (n != this) {
+                                common::lock_guard<parallel> l(n->mutex);
+                                n->receive(t, P::node::uid, m);
+                            }
                         }
                     }
                 } else P::node::update();

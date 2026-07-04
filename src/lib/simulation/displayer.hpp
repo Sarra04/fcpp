@@ -1458,7 +1458,7 @@ struct displayer {
                         break;
                     default:
                         // pass key to renderer
-                        if (not m_renderer.keyboardInput(key, first, deltaTime, mods) and first and not justoutoflegenda and key != GLFW_KEY_LEFT_SHIFT and key != GLFW_KEY_RIGHT_SHIFT) {
+                        if (not m_renderer.keyboardInput(key, first, deltaTime, mods) and first and not justoutoflegenda and key < GLFW_KEY_LEFT_SHIFT) {
                             // unrecognised key: stop simulation for legenda
                             P::net::frequency(0);
                             m_hoveredNode = -1;

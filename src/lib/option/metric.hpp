@@ -113,7 +113,7 @@ struct retain {
 
     //! @brief Reads the period from class data.
     inline result_type get_period(common::number_sequence<true>) const {
-        return m_period;
+        return (result_type)m_period;
     }
 
     //! @brief The period of time after which values are discarded.

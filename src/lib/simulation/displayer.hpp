@@ -1,4 +1,4 @@
-// Copyright © 2022 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
+// Copyright © 2025 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
 
 /**
  * @file displayer.hpp
@@ -20,6 +20,7 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -48,134 +49,150 @@ namespace component {
 
 // Namespace of tags to be used for initialising components.
 namespace tags {
-    //! @brief Declaration tag associating to a storage tag regulating the shape of nodes.
+    //! @brief Declaration tag associating to a storage tag regulating the shape of nodes (defaults to none).
     template <typename T>
     struct shape_tag {};
 
-    //! @brief Declaration tag associating to the base shape of nodes.
+    //! @brief Declaration tag associating to the base shape of nodes (defaults to cube).
     template <intmax_t n>
     struct shape_val {};
 
-    //! @brief Declaration tag associating to a storage tag regulating the size of nodes.
+    //! @brief Declaration tag associating to a storage tag regulating the size of nodes (defaults to none).
     template <typename T>
     struct size_tag {};
 
-    //! @brief Declaration tag associating to the base size of nodes.
+    //! @brief Declaration tag associating to the base size of nodes (defaults to 1).
     template <intmax_t num, intmax_t den = 1>
     struct size_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the colors of nodes.
+    //! @brief Declaration tag associating to storage tags regulating the colors of nodes (defaults to none).
     template <typename... Ts>
     struct color_tag {};
 
-    //! @brief Declaration tag associating to the base colors of nodes.
+    //! @brief Declaration tag associating to the base colors of nodes (defaults to white).
     template <intmax_t... cs>
     struct color_val {};
 
-    //! @brief Declaration tag associating to storage tags with the text of the node labels.
+    //! @brief Declaration tag associating to a storage tag regulating the color of edges (defaults to none).
+    template <typename T>
+    struct edge_color_tag {};
+
+    //! @brief Declaration tag associating to the base colors of edges (defaults to black).
+    template <intmax_t c>
+    struct edge_color_val {};
+
+    //! @brief Declaration tag associating to a storage tag regulating the size of edges (defaults to none).
+    template <typename T>
+    struct edge_size_tag {};
+
+    //! @brief Declaration tag associating to the base size of edges (defaults to 0).
+    template <intmax_t num, intmax_t den = 1>
+    struct edge_size_val {};
+
+    //! @brief Declaration tag associating to a storage tag with the text of the node labels (defaults to no text).
     template <typename T>
     struct label_text_tag {};
 
-    //! @brief Declaration tag associating to storage tags regulating the size of node labels.
+    //! @brief Declaration tag associating to a storage tag regulating the size of node labels (defaults to none).
     template <typename T>
     struct label_size_tag {};
 
-    //! @brief Declaration tag associating to the base size of node labels.
+    //! @brief Declaration tag associating to the base size of node labels (defaults to 1).
     template <intmax_t num, intmax_t den = 1>
     struct label_size_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the color of node labels.
+    //! @brief Declaration tag associating to a storage tag regulating the color of node labels (defaults to none).
     template <typename T>
     struct label_color_tag {};
 
-    //! @brief Declaration tag associating to the base colors of node labels.
+    //! @brief Declaration tag associating to the base colors of node labels (defaults to black).
     template <intmax_t c>
     struct label_color_val {};
 
-    //! @brief Declaration tag associating to a storage tag regulating the shape of node shadows.
+    //! @brief Declaration tag associating to a storage tag regulating the shape of node shadows (defaults to none).
     template <typename T>
     struct shadow_shape_tag {};
 
-    //! @brief Declaration tag associating to the base shape of node shadows.
+    //! @brief Declaration tag associating to the base shape of node shadows (defaults to the same shape as the node).
     template <intmax_t n>
     struct shadow_shape_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the size of node shadows.
-    template <typename T>
-    struct shadow_size_tag {};
-
-    //! @brief Declaration tag associating to the base size of node shadows.
-    template <intmax_t num, intmax_t den = 1>
-    struct shadow_size_val {};
-
-    //! @brief Declaration tag associating to storage tags regulating the color of node shadows.
+    //! @brief Declaration tag associating to a storage tag regulating the color of node shadows (defaults to none).
     template <typename T>
     struct shadow_color_tag {};
 
-    //! @brief Declaration tag associating to the base colors of node shadows.
+    //! @brief Declaration tag associating to the base colors of node shadows (defaults to the same color as the node).
     template <intmax_t c>
     struct shadow_color_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the time duration of past positions creating the node tail.
+    //! @brief Declaration tag associating to a storage tag regulating the size of node shadows (defaults to none).
+    template <typename T>
+    struct shadow_size_tag {};
+
+    //! @brief Declaration tag associating to the base size of node shadows (defaults to 0).
+    template <intmax_t num, intmax_t den = 1>
+    struct shadow_size_val {};
+
+    //! @brief Declaration tag associating to a storage tag regulating the time duration of past positions creating the node tail (defaults to none).
     template <typename T>
     struct tail_time_tag {};
 
-    //! @brief Declaration tag associating to the time duration of past positions creating the node tail.
+    //! @brief Declaration tag associating to the time duration of past positions creating the node tail (defaults to 0).
     template <intmax_t num, intmax_t den = 1>
     struct tail_time_val {};
 
-    //! @brief Declaration tag associating to the maximum granularity of snapshot points in tails in FPS.
+    //! @brief Declaration tag associating to the maximum granularity of snapshot points in tails in FPS (defaults to \ref FCPP_TAIL_GRANULARITY).
     template <intmax_t num, intmax_t den = 1>
     struct tail_granularity {};
 
-    //! @brief Declaration tag associating to storage tags regulating the color of the node tail.
+    //! @brief Declaration tag associating to a storage tag regulating the color of the node tail (defaults to none).
     template <typename T>
     struct tail_color_tag {};
 
-    //! @brief Declaration tag associating to the color of the node tail.
+    //! @brief Declaration tag associating to the base color of the node tail (defaults to black).
     template <intmax_t c>
     struct tail_color_val {};
 
-    //! @brief Declaration tag associating to storage tags regulating the width of the node tail.
+    //! @brief Declaration tag associating to a storage tag regulating the width of the node tail (defaults to none).
     template <typename T>
     struct tail_width_tag {};
 
-    //! @brief Declaration tag associating to the width of the node tail as fraction of node size.
+    //! @brief Declaration tag associating to the width of the node tail as fraction of node size (defaults to 1).
     template <intmax_t num, intmax_t den = 1>
     struct tail_width_val {};
 
-    //! @brief Declaration tag associating to the colors of the general theme.
+    //! @brief Declaration tag associating to the colors of the general theme (defaults to white/black/cyan).
     template <intmax_t background, intmax_t foreground, intmax_t selection>
     struct color_theme {};
 
-    //! @brief Declaration tag associating to the bounding coordinates of the grid area.
+    //! @brief Declaration tag associating to the bounding coordinates of the grid area (defaults to the minimal area covering initial nodes)
     template <intmax_t xmin, intmax_t ymin, intmax_t xmax, intmax_t ymax, intmax_t den = 1>
     struct area;
 
-    //! @brief Declaration tag associating to the antialiasing factor.
+    //! @brief Declaration tag associating to the antialiasing factor (defaults to \ref FCPP_ANTIALIAS).
     template <intmax_t n>
     struct antialias {};
 
-    //! @brief Declaration flag associating to whether parallelism is enabled.
+    //! @brief Declaration flag associating to whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
     template <bool b>
     struct parallel;
 
-    //! @brief Net initialisation tag associating to the minimum coordinates of the grid area.
+    //! @brief Net initialisation tag associating to the minimum coordinates of the grid area (defaults to the value in \ref tags::area).
     struct area_min {};
 
-    //! @brief Net initialisation tag associating to the maximum coordinates of the grid area.
+    //! @brief Net initialisation tag associating to the maximum coordinates of the grid area (defaults to the value in \ref tags::area).
     struct area_max {};
 
-    //! @brief Net initialisation tag associating to the main name of a component composition instance.
+    //! @brief Net initialisation tag associating to the main name of a component composition instance (defaults to the empty string).
     struct name;
 
-    //! @brief Net initialisation tag associating to the refresh rate (0 for opportunistic frame refreshing).
+    //! @brief Net initialisation tag associating to the refresh rate (0 for opportunistic frame refreshing, defaults to \ref FCPP_REFRESH_RATE).
     struct refresh_rate {};
 
-    //! @brief Net initialisation tag associating to the texture to be used for the reference plane.
+    //! @brief Net initialisation tag associating to the texture to be used for the reference plane (defaults to none).
     struct texture {};
 
-    //! @brief Net initialisation tag associating to the number of threads that can be created.
+    //! @brief Net initialisation tag associating to the number of threads that can be created (defaults to \ref FCPP_THREADS).
     struct threads;
 }
 
@@ -517,6 +534,10 @@ namespace details {
  * - \ref tags::size_val defines the base size of nodes (defaults to 1).
  * - \ref tags::color_tag defines storage tags regulating the colors of nodes (defaults to none).
  * - \ref tags::color_val defines the base colors of nodes (defaults to white).
+ * - \ref tags::edge_color_tag defines a storage tag regulating the color of edges (defaults to none).
+ * - \ref tags::edge_color_val defines the base color of edges (defaults to black).
+ * - \ref tags::edge_size_tag defines a storage tag regulating the size of edges (defaults to none).
+ * - \ref tags::edge_size_val defines the base size of edges (defaults to 0).
  * - \ref tags::label_text_tag defines a storage tag regulating the text of node labels (defaults to no text).
  * - \ref tags::label_size_tag defines a storage tag regulating the size of node labels (defaults to none).
  * - \ref tags::label_size_val defines the base size of node labels (defaults to 1).
@@ -530,12 +551,12 @@ namespace details {
  * - \ref tags::shadow_size_val defines the base size of node shadows (defaults to 0).
  * - \ref tags::tail_time_tag defines a storage tag regulating the time duration of past positions creating the node tail (defaults to none).
  * - \ref tags::tail_time_val defines the base time duration of past positions creating the node tail (defaults to 0).
- * - \ref tags::tail_granularity defines the maximum granularity of snapshot points in tails in FPS (defaults to FCPP_TAIL_GRANULARITY).
+ * - \ref tags::tail_granularity defines the maximum granularity of snapshot points in tails in FPS (defaults to \ref FCPP_TAIL_GRANULARITY).
  * - \ref tags::tail_color_tag defines a storage tag regulating the color of the node tail (defaults to none).
- * - \ref tags::tail_color_val defines the base color of the node tail (defaults to \ref BLACK).
+ * - \ref tags::tail_color_val defines the base color of the node tail (defaults to black).
  * - \ref tags::tail_width_tag defines a storage tag regulating the width of the node tail (defaults to none).
  * - \ref tags::tail_width_val defines the base width of the node tail as fraction of node size (defaults to 1).
- * - \ref tags::color_theme defines the colors of the general theme (defaults to WHITE/BLACK/CYAN).
+ * - \ref tags::color_theme defines the colors of the general theme (defaults to white/black/cyan).
  * - \ref tags::area defines the bounding coordinates of the grid area (defaults to the minimal area covering initial nodes).
  * - \ref tags::antialias defines the antialiasing factor (defaults to \ref FCPP_ANTIALIAS).
  *
@@ -543,8 +564,9 @@ namespace details {
  * - \ref tags::parallel defines whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
  *
  * <b>Net initialisation tags:</b>
- * - \ref tags::area_min associates to the the minimum coordinates of the grid area (defaults to the value in \ref tags::area).
- * - \ref tags::area_max associates to the the maximum coordinates of the grid area (defaults to the value in \ref tags::area).
+ * - \ref tags::area_min associates to the minimum coordinates of the grid area (defaults to the value in \ref tags::area).
+ * - \ref tags::area_max associates to the maximum coordinates of the grid area (defaults to the value in \ref tags::area).
+ * - \ref tags::name associates to the main name of a component composition instance (defaults to the empty string).
  * - \ref tags::refresh_rate associates to the refresh rate (0 for opportunistic frame refreshing, defaults to \ref FCPP_REFRESH_RATE).
  * - \ref tags::texture associates to the texture to be used for the reference plane (defaults to none).
  * - \ref tags::threads associates to the number of threads that can be created (defaults to \ref FCPP_THREADS).
@@ -587,6 +609,18 @@ struct displayer {
     //! @brief Base colors of nodes (defaults to white).
     using color_val = common::option_nums<tags::color_val, Ts...>;
 
+    //! @brief Storage tag regulating the color of edges.
+    using edge_color_tag = common::option_type<tags::edge_color_tag, void, Ts...>;
+
+    //! @brief Base color of edges (defaults to black).
+    constexpr static intmax_t edge_color_val = common::option_num<tags::edge_color_val, BLACK, Ts...>;
+
+    //! @brief Storage tag regulating the size of edges.
+    using edge_size_tag = common::option_type<tags::edge_size_tag, void, Ts...>;
+
+    //! @brief Base size of edges (defaults to 0).
+    constexpr static double edge_size_val = common::option_float<tags::edge_size_val, 0, 1, Ts...>;
+
     //! @brief Storage tag associated to the text of the node labels.
     using label_text_tag = common::option_type<tags::label_text_tag, void, Ts...>;
 
@@ -608,10 +642,10 @@ struct displayer {
     //! @brief Base shape of nodes (defaults to the same shape as the node).
     constexpr static intmax_t shadow_shape_val = common::option_num<tags::shadow_shape_val, -1, Ts...>;
 
-    //! @brief Storage tags regulating the color of node shadows.
+    //! @brief Storage tag regulating the color of node shadows.
     using shadow_color_tag = common::option_type<tags::shadow_color_tag, void, Ts...>;
 
-    //! @brief Base colors of node shadows (defaults to the same color as the node).
+    //! @brief Base color of node shadows (defaults to the same color as the node).
     constexpr static intmax_t shadow_color_val = common::option_num<tags::shadow_color_val, -1, Ts...>;
 
     //! @brief Storage tag regulating the size of node shadows.
@@ -705,7 +739,7 @@ struct displayer {
                     if (n < 0.1) m_tail_normals.push_back({0,0});
                     else m_tail_normals.push_back(unit(std::move(n)));
                 }
-                double dt = common::get_or<tail_time_tag>(P::node::storage_tuple(), tail_time_val);
+                double dt = common::get_or<tail_time_tag>(P::node::storage_tuple(), double(tail_time_val));
                 while (m_tail_times.front() < t - dt) {
                     m_tail_points.pop_front();
                     m_tail_normals.pop_front();
@@ -723,14 +757,14 @@ struct displayer {
             void draw(bool star) const {
                 // gather shape and size
                 shape s = common::get_or<shape_tag>(P::node::storage_tuple(), shape(shape_val));
-                double d = common::get_or<size_tag>(P::node::storage_tuple(), size_val);
+                double d = common::get_or<size_tag>(P::node::storage_tuple(), double(size_val));
                 if (m_highlight) d *= 1.5;
                 // gather personal position
                 glm::vec3 p = get_cached_position();
                 // render the node
                 P::node::net.getRenderer().drawShape(s, p, d, m_colors);
                 // render the shadow
-                double shadow_d = common::get_or<shadow_size_tag>(P::node::storage_tuple(), shadow_size_val);
+                double shadow_d = common::get_or<shadow_size_tag>(P::node::storage_tuple(), double(shadow_size_val));
                 if (shadow_d > 0) {
                     shape shadow_s = common::get_or<shadow_shape_tag>(P::node::storage_tuple(), shadow_shape_val == -1 ? s : shape(shadow_shape_val));
                     color shadow_c = common::get_or<shadow_color_tag>(P::node::storage_tuple(), shadow_color_val == -1 ? m_colors[0] : color(shadow_color_val));
@@ -738,10 +772,16 @@ struct displayer {
                 }
                 if (star) {
                     // gather neighbours' positions
-                    std::vector<glm::vec3> np;
-                    for (device_t d : m_prev_nbr_uids)
-                        np.push_back(P::node::net.node_at(d).get_cached_position());
-                    P::node::net.getRenderer().drawStar(p, np);
+                    std::unordered_map<packed_color, std::pair<std::vector<std::pair<glm::vec3, float>>, std::vector<glm::vec3>>> np;
+                    auto ec = common::get_or<edge_color_tag>(P::node::storage_tuple(), edge_color_val);
+                    auto es = common::get_or<edge_size_tag>(P::node::storage_tuple(), edge_size_val);
+                    for (device_t d : m_prev_nbr_uids) {
+                        float s = fcpp::details::self(es, d);
+                        if (s > 0) np[fcpp::details::self(ec, d)].first.emplace_back(P::node::net.node_at(d).get_cached_position(), s);
+                        else np[fcpp::details::self(ec, d)].second.push_back(P::node::net.node_at(d).get_cached_position());
+                    }
+                    for (auto const& n : np)
+                        P::node::net.getRenderer().drawStar(p, n.second.first, n.second.second, color(n.first));
                 }
             }
 
@@ -750,16 +790,16 @@ struct displayer {
                 // render the label
                 std::string label_text = common::get_or<label_text_tag>(P::node::storage_tuple(), "");
                 if (label_text.size()) {
-                    double d = common::get_or<size_tag>(P::node::storage_tuple(), size_val) * 0.5;
+                    double d = common::get_or<size_tag>(P::node::storage_tuple(), double(size_val)) * 0.5;
                     glm::vec3 p = get_cached_position() + glm::vec3(d,d,d);
-                    double label_size = common::get_or<label_size_tag>(P::node::storage_tuple(), label_size_val);
+                    double label_size = common::get_or<label_size_tag>(P::node::storage_tuple(), double(label_size_val));
                     color label_color = common::get_or<label_color_tag>(P::node::storage_tuple(), color(label_color_val));
                     P::node::net.getRenderer().drawLabel(label_text, p, {label_color.rgba[0], label_color.rgba[1], label_color.rgba[2], label_color.rgba[3]}, label_size);
                 }
                 if (m_tail_points.size() > 1) {
-                    double d = common::get_or<size_tag>(P::node::storage_tuple(), size_val);
+                    double d = common::get_or<size_tag>(P::node::storage_tuple(), double(size_val));
                     if (m_highlight) d *= 1.5;
-                    d *= common::get_or<tail_width_tag>(P::node::storage_tuple(), tail_width_val);
+                    d *= common::get_or<tail_width_tag>(P::node::storage_tuple(), double(tail_width_val));
                     P::node::net.getRenderer().drawTail(m_tail_points, m_tail_normals, m_tail_color, d);
                 }
             }
@@ -1418,7 +1458,7 @@ struct displayer {
                         break;
                     default:
                         // pass key to renderer
-                        if (not m_renderer.keyboardInput(key, first, deltaTime, mods) and first and not justoutoflegenda and key != GLFW_KEY_LEFT_SHIFT and key != GLFW_KEY_RIGHT_SHIFT) {
+                        if (not m_renderer.keyboardInput(key, first, deltaTime, mods) and first and not justoutoflegenda and key < GLFW_KEY_LEFT_SHIFT) {
                             // unrecognised key: stop simulation for legenda
                             P::net::frequency(0);
                             m_hoveredNode = -1;

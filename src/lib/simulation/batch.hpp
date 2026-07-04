@@ -1,4 +1,4 @@
-// Copyright © 2023 Giorgio Audrito. All Rights Reserved.
+// Copyright © 2026 Giorgio Audrito. All Rights Reserved.
 
 /**
  * @file batch.hpp
@@ -9,6 +9,7 @@
 #define FCPP_SIMULATION_BATCH_H_
 
 #include <cassert>
+#include <cmath>
 
 #include <algorithm>
 #include <array>
@@ -41,7 +42,7 @@ namespace batch {
 
 //! @brief Namespace of tags for batch runs.
 namespace tags {
-    //! @brief A tag for indexing network types to be run.
+    //! @brief A tag for indexing network types to be run (defaults to 0).
     struct type_index {};
 } // tags
 
@@ -93,6 +94,20 @@ namespace details {
     template <typename... Ts, typename F>
     inline generator<F, Ts...> make_generator(F&& f, size_t core_size, size_t extra_size) {
         return {std::move(f), core_size, extra_size};
+    }
+
+    //! @brief Disjoint concatenation of two generators for a same sequence of tags and types.
+    template <typename F, typename G, typename... Ts>
+    auto operator+(generator<F,Ts...> const& a, generator<G,Ts...> const& b) {
+        return make_generator<Ts...>([=](auto& t, size_t i){
+            if (i < a.core_size()) return a(t, i);
+            i -= a.core_size();
+            if (i < b.core_size()) return b(t, i);
+            i -= b.core_size();
+            if (i < a.extra_size()) return a(t, a.core_size()+i);
+            i -= a.extra_size();
+            return b(t, b.core_size()+i);
+        }, a.core_size()+b.core_size(), a.extra_size()+b.extra_size());
     }
 } // details
 //! @endcond
@@ -255,8 +270,8 @@ auto recursive(T init, F&& f) {
     for (size_t i = 0; ; ++i) {
         common::option<T> r = f(i, prev);
         if (r.empty()) break;
-        prev = r;
-        v.push_back(r);
+        prev = (T)r;
+        v.push_back((T)r);
     }
     return details::make_generator<S, T>([=](auto& t, size_t i){
         common::get<S>(t) = v[i];
@@ -499,12 +514,9 @@ class tagged_tuple_sequences {
     }
 
     //! @brief Internally shuffles the sequence pseudo-randomly, in order to achieve better statistical balancing.
-    void shuffle(uint_fast32_t seed = 0) {
+    void shuffle() {
         if (m_total_size < 3) return;
-        std::mt19937 gen(seed);
-        std::uniform_int_distribution<> dist(1, m_total_size-1);
-        do m_shuffle = dist(gen);
-        while (gcd(m_shuffle, m_total_size) > 1);
+        for (m_shuffle = std::sqrt(m_total_size) + 1; not_prime(m_shuffle); ++m_shuffle);
     }
 
     //! @brief Reduces the generator to a subsequence.
@@ -548,6 +560,14 @@ class tagged_tuple_sequences {
     }
 
   private:
+    //! @brief Computes whether x < 18769 is a composite number.
+    bool not_prime(size_t x) {
+        constexpr uint8_t primes[32] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97, 101, 103, 107, 109, 113, 127, 131};
+        for (size_t i = 0; i < 32 and primes[i] * primes[i] <= x; ++i)
+            if (x % primes[i] == 0) return true;
+        return false;
+    }
+
     //! @brief Computes the gcd assuming that x > 0.
     size_t gcd(size_t x, size_t y) {
         do {
@@ -761,7 +781,7 @@ namespace details {
 template <typename... Ts, typename... Ss>
 void run(common::type_sequence<Ts...> x, common::tags::distributed_execution e, tagged_tuple_sequences<Ss...> vs) {
     // initialize mpi, generators and plotter address
-    if (e.shuffle) vs.shuffle(42);
+    if (e.shuffle) vs.shuffle();
     auto plot = common::get_or<component::tags::plotter>(vs[0], nullptr);
     constexpr int rank_master = 0;
     int rank, n_procs;

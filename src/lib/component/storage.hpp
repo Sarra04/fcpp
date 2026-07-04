@@ -26,11 +26,11 @@ namespace component {
 
 // Namespace of tags to be used for initialising components.
 namespace tags {
-    //! @brief Declaration tag associating to a sequence of tags and types for storing global persistent data.
+    //! @brief Declaration tag associating to a sequence of tags and types for storing global persistent data (defaults to the empty sequence).
     template <typename... Ts>
     struct net_store {};
 
-    //! @brief Declaration tag associating to a sequence of tags and types for storing persistent data in nodes.
+    //! @brief Declaration tag associating to a sequence of tags and types for storing persistent data in nodes (defaults to the empty sequence).
     template <typename... Ts>
     struct node_store {};
 
@@ -102,7 +102,7 @@ struct storage {
             }
 
             //! @cond INTERNAL
-            #define MISSING_TYPE_MESSAGE "unsupported tag access (add A to node storage tag list)"
+            #define MISSING_TYPE_MESSAGE ANSI_START "unsupported tag access (add A to node storage tag list)" ANSI_END
             //! @endcond
 
             /**
@@ -183,7 +183,7 @@ struct storage {
             }
 
             //! @cond INTERNAL
-            #define MISSING_TYPE_MESSAGE "unsupported tag access (add A to net storage tag list)"
+            #define MISSING_TYPE_MESSAGE ANSI_START "unsupported tag access (add A to net storage tag list)" ANSI_END
             //! @endcond
 
             /**

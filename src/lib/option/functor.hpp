@@ -208,7 +208,7 @@ struct div {
     //! @brief Functor computation.
     template <typename G, typename T>
     type operator()(G&& g, T const& row) {
-        return m_a(g, row) / m_b(g, row);
+        return m_a(g, row) / R(m_b(g, row));
     }
 
   private:
@@ -243,7 +243,55 @@ struct pow {
 };
 
 
-//! @brief Functor accumulating elements over time.
+//! @brief Functor computing the maximum of two elements.
+template <typename A, typename B, typename R = real_t>
+struct max {
+    //! @brief Result type.
+    using type = R;
+
+    //! @brief Constructor.
+    template <typename G, typename T>
+    max(G&& g, T const& t) : m_a(g, t), m_b(g, t) {}
+
+    //! @brief Functor computation.
+    template <typename G, typename T>
+    type operator()(G&& g, T const& row) {
+        return std::max(type(m_a(g, row)), type(m_b(g, row)));
+    }
+
+  private:
+    //! @brief The first element.
+    details::element<A> m_a;
+    //! @brief The second element.
+    details::element<B> m_b;
+};
+
+
+//! @brief Functor computing the minimum of two elements.
+template <typename A, typename B, typename R = real_t>
+struct min {
+    //! @brief Result type.
+    using type = R;
+
+    //! @brief Constructor.
+    template <typename G, typename T>
+    min(G&& g, T const& t) : m_a(g, t), m_b(g, t) {}
+
+    //! @brief Functor computation.
+    template <typename G, typename T>
+    type operator()(G&& g, T const& row) {
+        return std::min(type(m_a(g, row)), type(m_b(g, row)));
+    }
+
+  private:
+    //! @brief The first element.
+    details::element<A> m_a;
+    //! @brief The second element.
+    details::element<B> m_b;
+};
+
+
+//! @brief Functor computing the natural exponential function.
 template <typename A, typename R = real_t>
 struct exp {
     //! @brief Result type.
@@ -265,7 +313,7 @@ struct exp {
 };
 
 
-//! @brief Functor accumulating elements over time.
+//! @brief Functor computing the logarithm of its argument.
 template <typename A, typename R = real_t>
 struct log {
     //! @brief Result type.
@@ -279,6 +327,28 @@ struct log {
     template <typename G, typename T>
     type operator()(G&& g, T const& row) {
         return std::log(m_a(g, row));
+    }
+
+  private:
+    //! @brief The element.
+    details::element<A> m_a;
+};
+
+
+//! @brief Functor computing the absolute value of its argument.
+template <typename A, typename R = real_t>
+struct abs {
+    //! @brief Result type.
+    using type = R;
+
+    //! @brief Constructor.
+    template <typename G, typename T>
+    abs(G&& g, T const& t) : m_a(g, t) {}
+
+    //! @brief Functor computation.
+    template <typename G, typename T>
+    type operator()(G&& g, T const& row) {
+        return std::abs(m_a(g, row));
     }
 
   private:

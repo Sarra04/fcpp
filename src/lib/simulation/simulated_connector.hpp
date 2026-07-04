@@ -1,4 +1,4 @@
-// Copyright © 2021 Giorgio Audrito. All Rights Reserved.
+// Copyright © 2026 Giorgio Audrito. All Rights Reserved.
 
 /**
  * @file simulated_connector.hpp
@@ -36,34 +36,28 @@ namespace component {
 
 // Namespace of tags to be used for initialising components.
 namespace tags {
-    //! @brief Declaration tag associating to a connector class.
+    //! @brief Declaration tag associating to a connector class (defaults to \ref connect::clique "connect::clique<dimension>").
     template <typename T>
     struct connector {};
 
-    //! @brief Declaration tag associating to a delay generator for sending messages after rounds.
+    //! @brief Declaration tag associating to a delay generator for sending messages after rounds (defaults to zero delay through \ref distribution::constant_n "distribution::constant_n<times_t, 0>").
     template <typename T>
     struct delay {};
 
-    //! @brief Declaration tag associating to the dimensionality of the space.
+    //! @brief Declaration tag associating to the dimensionality of the space (defaults to 2).
     template <intmax_t n>
     struct dimension;
 
-    //! @brief Declaration flag associating to whether message sizes should be emulated.
+    //! @brief Declaration flag associating to whether message sizes should be emulated (defaults to false).
     template <bool b>
     struct message_size {};
 
-    //! @brief Declaration flag associating to whether parallelism is enabled.
+    //! @brief Declaration flag associating to whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
     template <bool b>
     struct parallel;
 
-    //! @brief Node initialisation tag associating to communication power.
-    struct connection_data {};
-
-    //! @brief Initialisation tag associating to the time sensitivity, allowing indeterminacy below it.
+    //! @brief Initialisation tag associating to the time sensitivity, allowing indeterminacy below it (defaults to \ref FCPP_TIME_EPSILON).
     struct epsilon;
-
-    //! @brief Net initialisation tag associating to communication radius.
-    struct radius {};
 }
 
 
@@ -142,7 +136,6 @@ namespace details {
  * - \ref tags::parallel defines whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
  *
  * <b>Node initialisation tags:</b>
- * - \ref tags::connection_data associates to communication power (defaults to `connector_type::data_type{}`).
  * - \ref tags::epsilon associates to the time sensitivity, allowing indeterminacy below it (defaults to \ref FCPP_TIME_EPSILON).
  *
  * Net initialisation tags (such as \ref tags::radius) are forwarded to connector classes.
@@ -215,7 +208,7 @@ struct simulated_connector {
              * @param t A `tagged_tuple` gathering initialisation values.
              */
             template <typename S, typename T>
-            node(typename F::net& n, common::tagged_tuple<S,T> const& t) : P::node(n,t), m_delay(get_generator(has_randomizer<P>{}, *this),t), m_data(common::get_or<tags::connection_data>(t, connection_data_type{})), m_nbr_msg_size(0) {
+            node(typename F::net& n, common::tagged_tuple<S,T> const& t) : P::node(n,t), m_delay(get_generator(has_randomizer<P>{}, *this),t), m_data(t), m_nbr_msg_size(0) {
                 m_send = m_leave = TIME_MAX;
                 m_epsilon = common::get_or<tags::epsilon>(t, FCPP_TIME_EPSILON);
                 P::node::net.cell_enter(P::node::as_final());

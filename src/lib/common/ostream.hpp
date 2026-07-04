@@ -428,11 +428,12 @@ namespace fcpp {
     std::string to_string(field<T> const& x) {
         using const_ref = std::conditional_t<std::is_same<T,bool>::value, T, T const&>;
         std::string s = "{";
-        for (size_t i = 0; i < details::get_ids(x).size() and i < FCPP_FIELD_DRAW_LIMIT and s.size() < 10*FCPP_FIELD_DRAW_LIMIT; ++i) if (details::get_vals(x)[i+1] != details::get_vals(x)[0]) {
+        for (size_t i = 0, c = 0; i < details::get_ids(x).size() and c < FCPP_FIELD_DRAW_LIMIT and s.size() < 10*FCPP_FIELD_DRAW_LIMIT; ++i) if (details::get_vals(x)[i+1] != details::get_vals(x)[0]) {
+            ++c;
             s += to_string(details::get_ids(x)[i]);
             s.push_back(':');
             s += to_string(common::escape(const_ref(details::get_vals(x)[i+1])));
-            if (i+1 == details::get_ids(x).size() or (i < FCPP_FIELD_DRAW_LIMIT-1 and s.size() < 10*FCPP_FIELD_DRAW_LIMIT-2)) s.push_back(',');
+            if (i+1 == details::get_ids(x).size() or (c < FCPP_FIELD_DRAW_LIMIT-1 and s.size() < 10*FCPP_FIELD_DRAW_LIMIT-2)) s.push_back(',');
             else for (int j=0; j<3; ++j) s.push_back('.');
             s.push_back(' ');
         }

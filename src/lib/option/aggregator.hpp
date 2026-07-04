@@ -229,7 +229,7 @@ class distinct {
 
   private:
     //! @brief Counters for every distinct item.
-    std::unordered_map<T,size_t> m_counts;
+    std::unordered_map<std::conditional_t<std::is_empty<T>::value, int, T>,size_t> m_counts;
 };
 
 
@@ -633,7 +633,7 @@ class deviation {
     result_type<U> result() const {
         if (m_count == 0) return {std::numeric_limits<T>::quiet_NaN()};
         T d2 = (m_sqsum*m_count-m_sum*m_sum)/m_count/m_count;
-        T d1 = sqrt(d2);
+        T d1 = d2 <= 0 ? 0 : sqrt(d2);
         if (std::isfinite(d1) and (d1+1)*(d1+1) <= d2) ++d1;
         return {d1};
     }
@@ -726,7 +726,7 @@ class stats {
     result_type<U> result() const {
         if (m_count == 0) return {std::numeric_limits<T>::quiet_NaN(), std::numeric_limits<T>::quiet_NaN()};
         T d2 = (m_sqsum*m_count-m_sum*m_sum)/m_count/m_count;
-        T d1 = sqrt(d2);
+        T d1 = d2 <= 0 ? 0 : sqrt(d2);
         if (std::isfinite(d1) and (d1+1)*(d1+1) <= d2) ++d1;
         return {m_sum/m_count, d1};
     }
@@ -1106,7 +1106,7 @@ class quantile<T, false, qs...> {
 
   private:
     std::array<char, sizeof...(qs)> const m_quantiles = {qs...};
-    std::unordered_multiset<T> m_values;
+    std::unordered_multiset<std::conditional_t<std::is_empty<T>::value, int, T>> m_values;
 };
 
 //! @brief Implementation not supporting erase.
@@ -1351,6 +1351,7 @@ class container : public A {
 /**
  * @brief Filters only values respecting filter F before feeding them to another aggregator.
  *
+ * @tparam F The filter predicate type.
  * @tparam A The value aggregator type.
  */
 template <typename F, typename A>
@@ -1418,6 +1419,70 @@ class filter : public A {
  */
 template <typename A>
 using only_finite = filter<fcpp::filter::finite, A>;
+
+
+/**
+ * @brief Maps a functor to values before feeding them to another aggregator.
+ *
+ * @tparam F The callable class functor type.
+ * @tparam A The value aggregator type.
+ */
+template <typename F, typename A>
+class mapper : public A {
+    //! @brief The type of values aggregated.
+    using T = typename A::type;
+
+    template <typename T>
+    struct remap_tuple;
+
+    template <typename... Ss, typename... Ts>
+    struct remap_tuple<common::tagged_tuple<common::type_sequence<Ss...>, common::type_sequence<Ts...>>> {
+        using type = common::tagged_tuple<common::type_sequence<mapper<F,Ss>...>, common::type_sequence<Ts...>>;
+    };
+
+  public:
+    //! @brief The tag aggregated from result type.
+    using tag = T;
+
+    //! @brief The type of the aggregation result, given the tag of the aggregated values.
+    template <typename U>
+    using result_type = typename remap_tuple<typename A::template result_type<U>>::type;
+
+    //! @brief Default constructor.
+    mapper() = default;
+
+    //! @brief Erases a value from the aggregation set.
+    inline void erase(T const& value) {
+        A::erase(m_functor(value));
+    }
+
+    //! @brief Inserts a new value to be aggregated.
+    inline void insert(T const& value) {
+        A::insert(m_functor(value));
+    }
+
+    //! @brief The results of aggregation.
+    template <typename U>
+    result_type<U> result() const {
+        auto t = A::template result<U>();
+        return reinterpret_cast<result_type<U>&>(t);
+    }
+
+    //! @brief The aggregator name.
+    static std::string name() {
+        std::string fs = common::type_name<F>();
+        std::string as = A::name();
+        std::string s = fs + ' ';
+        for (char c : as)
+            if (c == '-') s += '-' + fs + ' ';
+            else s.push_back(c);
+        return s;
+    }
+
+  private:
+    //! @brief The callable filter class.
+    F m_functor;
+};
 
 
 }

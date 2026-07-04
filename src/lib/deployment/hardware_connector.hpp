@@ -1,4 +1,4 @@
-// Copyright © 2021 Giorgio Audrito. All Rights Reserved.
+// Copyright © 2026 Giorgio Audrito. All Rights Reserved.
 
 /**
  * @file hardware_connector.hpp
@@ -34,24 +34,21 @@ namespace component {
 
 // Namespace of tags to be used for initialising components.
 namespace tags {
-    //! @brief Declaration tag associating to a connector class.
+    //! @brief Declaration tag associating to a connector class (defaults to \ref os::async_retry_network "os::async_retry_network<message_push>").
     template <typename T>
     struct connector;
 
-    //! @brief Declaration tag associating to a delay generator for sending messages after rounds.
+    //! @brief Declaration tag associating to a delay generator for sending messages after rounds (defaults to zero delay through \ref distribution::constant_n "distribution::constant_n<times_t, 0>").
     template <typename T>
     struct delay;
 
-    //! @brief Declaration flag associating to whether incoming messages are pushed or pulled.
+    //! @brief Declaration flag associating to whether incoming messages are pushed or pulled (defaults to \ref FCPP_MESSAGE_PUSH).
     template <bool b>
     struct message_push;
 
-    //! @brief Declaration flag associating to whether parallelism is enabled.
+    //! @brief Declaration flag associating to whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
     template <bool b>
     struct parallel;
-
-    //! @brief Node initialisation tag associating to communication power.
-    struct connection_data;
 }
 
 
@@ -68,9 +65,6 @@ namespace tags {
  * <b>Declaration flags:</b>
  * - \ref tags::message_push defines whether incoming messages are pushed or pulled (defaults to \ref FCPP_MESSAGE_PUSH).
  * - \ref tags::parallel defines whether parallelism is enabled (defaults to \ref FCPP_PARALLEL).
- *
- * <b>Node initialisation tags:</b>
- * - \ref tags::connection_data associates to communication power (defaults to `connector_type::data_type{}`).
  */
 template <class... Ts>
 struct hardware_connector {
@@ -117,7 +111,7 @@ struct hardware_connector {
              * @param t A `tagged_tuple` gathering initialisation values.
              */
             template <typename S, typename T>
-            node(typename F::net& n, common::tagged_tuple<S,T> const& t) : P::node(n,t), m_delay(get_generator(has_randomizer<P>{}, *this),t), m_send(TIME_MAX), m_nbr_dist(INF), m_nbr_msg_size(0), m_network(*this, common::get_or<tags::connection_data>(t, connection_data_type{})) {}
+            node(typename F::net& n, common::tagged_tuple<S,T> const& t) : P::node(n,t), m_delay(get_generator(has_randomizer<P>{}, *this),t), m_send(TIME_MAX), m_nbr_dist(INF), m_nbr_msg_size(0), m_network(*this, t) {}
 
             //! @brief Connector data.
             connection_data_type& connector_data() {
@@ -191,15 +185,15 @@ struct hardware_connector {
                 fcpp::details::self(m_nbr_msg_size, m.device) = m.content.size();
                 common::isstream is(std::move(m.content));
                 typename F::node::message_t mt;
-                #if __cpp_exceptions
+#ifndef FCPP_DISABLE_EXCEPTIONS
                 try {
-                #endif
+#endif
                     is >> mt;
                     if (is.size() == 0)
                         P::node::as_final().receive(m.time, m.device, mt);
-                #if __cpp_exceptions
+#ifndef FCPP_DISABLE_EXCEPTIONS
                 } catch (common::format_error&) {}
-                #endif
+#endif
             }
 
             //! @brief Perceived distances from neighbours.

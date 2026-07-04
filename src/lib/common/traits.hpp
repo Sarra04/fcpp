@@ -21,14 +21,14 @@
 #endif
 
 #ifdef __clang__
-    //! @brief ANSI escape code for starting highlighting static asser error text in gcc (no codes in clang)
+    //! @brief ANSI escape code for starting highlighting static assert error text in gcc (no codes in clang)
     #define ANSI_START ""
-    //! @brief ANSI escape code for ending highlighting static asser error text in gcc (no codes in clang)
+    //! @brief ANSI escape code for ending highlighting static assert error text in gcc (no codes in clang)
     #define ANSI_END ""
 #else
-    //! @brief ANSI escape code for starting highlighting static asser error text in gcc (no codes in clang)
+    //! @brief ANSI escape code for starting highlighting static assert error text in gcc (no codes in clang)
     #define ANSI_START "\u001b[1m\u001b[4m"
-    //! @brief ANSI escape code for ending highlighting static asser error text in gcc (no codes in clang)
+    //! @brief ANSI escape code for ending highlighting static assert error text in gcc (no codes in clang)
     #define ANSI_END "\u001b[0m"
 #endif
 

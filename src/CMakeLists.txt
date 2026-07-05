@@ -227,6 +227,7 @@ endif(FCPP_BUILD_GL)
 
 add_library(
         stb_image
+        ./external/stb_image/stb_image_write.h
         ./external/stb_image/stb_image.h
         ./external/stb_image/stb_image.cpp
         ./external/rapidxml-1.13/rapidxml.hpp

@@ -1,4 +1,4 @@
-// Copyright © 2023 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
+// Copyright © 2025 Giorgio Audrito and Luigi Rapetta. All Rights Reserved.
 
 #include <cmath>
 #include <iostream>
@@ -707,31 +707,68 @@ void renderer::drawShadow(shape sh, glm::vec3 p, double d, color const& c) const
 }
 
 //! @brief It draws a star of lines, given the center and sides.
-void renderer::drawStar(glm::vec3 const& p, std::vector<glm::vec3> const& np) const {
+void renderer::drawStar(glm::vec3 const& p, std::vector<std::pair<glm::vec3, float>> const& np, std::vector<glm::vec3> const& nl, color const& c) const {
     // Create matrices (used several times)
     glm::mat4 const& projection{ m_camera.getPerspective() };
     glm::mat4 const& view{ m_camera.getView() };
-
-    float starData[6 * np.size()];
-    for (int i = 0; i < np.size(); ++i) {
-        starData[6 * i + 0] = p[0];
-        starData[6 * i + 1] = p[1];
-        starData[6 * i + 2] = p[2];
-        starData[6 * i + 3] = np[i][0];
-        starData[6 * i + 4] = np[i][1];
-        starData[6 * i + 5] = np[i][2];
-    }
-
     m_shaderProgramCol.use();
     m_shaderProgramCol.setMat4("u_projection", projection);
     m_shaderProgramCol.setMat4("u_view", view);
     m_shaderProgramCol.setMat4("u_model", glm::mat4{ 1.0f });
-    m_shaderProgramCol.setVec4("u_color", glm::vec4{ 0.0f, 0.0f, 0.0f, 1.0f });
-    glBindVertexArray(m_meshVAO[(int)vertex::star]);
-    glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::star]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(starData), starData, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glDrawArrays(GL_LINES, 0, 2 * np.size());
+    m_shaderProgramCol.setVec4("u_color", color_to_vec(c));
+
+    if (nl.size()) {
+        float starVertices[6 * nl.size()];
+        for (int i = 0; i < nl.size(); ++i) {
+            glm::vec3 q = (nl[i] + p) * 0.5f;
+            starVertices[6 * i + 0] = p[0];
+            starVertices[6 * i + 1] = p[1];
+            starVertices[6 * i + 2] = p[2];
+            starVertices[6 * i + 3] = q[0];
+            starVertices[6 * i + 4] = q[1];
+            starVertices[6 * i + 5] = q[2];
+        }
+        glBindVertexArray(m_meshVAO[(int)vertex::star]);
+        glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::star]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(starVertices), starVertices, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glDrawArrays(GL_LINES, 0, 2 * nl.size());
+    }
+    if (np.size()) {
+        float starVertices[12 * np.size()];
+        for (int i = 0; i < np.size(); ++i) {
+            glm::vec2 n = glm::normalize(glm::vec2(p[1] - np[i].first[1], np[i].first[0] - p[0])) * np[i].second;
+            glm::vec3 q = (np[i].first + p) * 0.5f;
+            starVertices[12 * i +  0] = p[0] + n[0];
+            starVertices[12 * i +  1] = p[1] + n[1];
+            starVertices[12 * i +  2] = p[2];
+            starVertices[12 * i +  3] = q[0] + n[0];
+            starVertices[12 * i +  4] = q[1] + n[1];
+            starVertices[12 * i +  5] = q[2];
+            starVertices[12 * i +  6] = p[0] - n[0];
+            starVertices[12 * i +  7] = p[1] - n[1];
+            starVertices[12 * i +  8] = p[2];
+            starVertices[12 * i +  9] = q[0] - n[0];
+            starVertices[12 * i + 10] = q[1] - n[1];
+            starVertices[12 * i + 11] = q[2];
+        }
+        unsigned int starIndices[6 * np.size()];
+        for (int i = 0; i < np.size(); ++i) {
+            starIndices[6 * i + 0] = 4*i;
+            starIndices[6 * i + 1] = 4*i + 1;
+            starIndices[6 * i + 2] = 4*i + 2;
+            starIndices[6 * i + 3] = 4*i + 1;
+            starIndices[6 * i + 4] = 4*i + 2;
+            starIndices[6 * i + 5] = 4*i + 3;
+        }
+        glBindVertexArray(m_meshVAO[(int)vertex::rectangle]);
+        glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::rectangle]);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(starVertices), starVertices, GL_DYNAMIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::rectangle]);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(starIndices), starIndices, GL_DYNAMIC_DRAW);
+        glDrawElements(GL_TRIANGLES, sizeof(starIndices) / sizeof(unsigned int), GL_UNSIGNED_INT, 0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
 }
 
 //! @brief It draws the tail of a node, as a sequence of lines given their endpoints, the color to be used and a width.

@@ -45,16 +45,16 @@ TEST(SimulatedMapTest, CollisionTest) {
 
 #if _WIN32
     _mkdir(".\\textures\\");
-     std::ofstream test_bitmap(".\\textures\\bitmap_test.png",std::ios::binary);
+     std::ofstream test_bitmap(".\\textures\\test.png", std::ios::binary);
 #else
     mkdir("./textures/", 0777);
-    std::ofstream test_bitmap("./textures/bitmap_test.png",std::ios::binary);
+    std::ofstream test_bitmap("./textures/test.png", std::ios::binary);
 #endif
 
    test_bitmap.write((char *)bitmap.data(),bitmap.size());
    test_bitmap.close();
 
-   map_navigator m = map_navigator("bitmap_test.png", color(BLACK), 0.5);
+   map_navigator m = map_navigator("test.png", color(BLACK), 0.5);
 
    constexpr float delta = 0.1;
    //start analysis
@@ -68,11 +68,10 @@ TEST(SimulatedMapTest, CollisionTest) {
 
    //remove test bitmap
 #if _WIN32
-    std::remove(".\\textures\\bitmap_test.png");
+    std::remove(".\\textures\\test.png");
     _rmdir(".\\textures\\");
 #else
-    std::remove("./textures/bitmap_test.png");
+    std::remove("./textures/test.png");
     rmdir("./textures/");
 #endif
-
 }

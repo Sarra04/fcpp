@@ -347,6 +347,13 @@ struct calculus {
                 return m_context.second().size(P::node::uid);
             }
 
+            //! @brief The current size of the export message that is being created.
+            size_t cur_msg_size() const {
+                common::osstream os;
+                os << m_export.second();
+                return os.size();
+            }
+
             //! @brief Identifiers of the neighbours.
             field<device_t> const& nbr_uid() const {
                 return m_nbr_uid;

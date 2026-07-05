@@ -172,13 +172,13 @@ namespace details {
 template <class... Ts>
 struct logger {
     //! @brief Sequence of storage tags and corresponding aggregator types.
-    using aggregators_type = common::tagged_tuple_t<common::option_types<tags::aggregators, Ts...>>;
+    using aggregators_type = common::tagged_tuple_t<common::storage_list<common::option_types<tags::aggregators, Ts...>>>;
 
     //! @brief Sequence of storage tags and corresponding functor types.
-    using functors_type = common::tagged_tuple_t<common::option_types<tags::log_functors, Ts...>>;
+    using functors_type = common::tagged_tuple_t<common::storage_list<common::option_types<tags::log_functors, Ts...>>>;
 
     //! @brief Tagged tuple type for storing extra info.
-    using extra_info_type = common::tagged_tuple_t<common::option_types<tags::extra_info, Ts...>>;
+    using extra_info_type = common::tagged_tuple_t<common::storage_list<common::option_types<tags::extra_info, Ts...>>>;
 
     //! @brief Type of the plotter object.
     using plot_type = common::option_type<tags::plot_type, plot::none, Ts...>;
@@ -328,7 +328,7 @@ struct logger {
             }
 
             //! @cond INTERNAL
-            #define MISSING_TYPE_MESSAGE "access to non-existent aggregator data A"
+            #define MISSING_TYPE_MESSAGE ANSI_START "access to non-existent aggregator data A" ANSI_END
             //! @endcond
 
             /**

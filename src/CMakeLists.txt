@@ -157,6 +157,8 @@ set(
     lib/coordination/collection.cpp
     lib/coordination/election.cpp
     lib/coordination/geometry.cpp
+    lib/coordination/past_ctl.cpp
+    lib/coordination/slcs.cpp
     lib/coordination/spreading.cpp
     lib/coordination/time.cpp
     lib/coordination/utils.cpp
@@ -164,6 +166,7 @@ set(
     lib/data/bloom.cpp
     lib/data/color.cpp
     lib/data/field.cpp
+    lib/data/gps_trace.cpp
     lib/data/hyperloglog.cpp
     lib/data/ordered.cpp
     lib/data/shape.cpp
@@ -227,6 +230,7 @@ add_library(
         ./external/stb_image/stb_image_write.h
         ./external/stb_image/stb_image.h
         ./external/stb_image/stb_image.cpp
+        ./external/rapidxml-1.13/rapidxml.hpp
 )
 target_include_directories(stb_image PUBLIC ./external/stb_image)
 if(FCPP_BUILD_MPI)
@@ -263,17 +267,17 @@ if(FCPP_BUILD_GL)
         ./external/glad-core-3.3/include/glad/glad.h
         ./external/glad-core-3.3/src/glad.c
     )
-    add_subdirectory(./external/glm-0.9.9.8/glm)
-    add_subdirectory(./external/glfw-3.3.4)
-    add_subdirectory(./external/freetype-2.11.0)
+    add_subdirectory(./external/glm-1.0.2)
+    add_subdirectory(./external/glfw-3.4)
+    add_subdirectory(./external/freetype-2.14.1)
     target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
     target_include_directories(
         fcpp PUBLIC
         ./external
         ./external/glad-core-3.3/include
-        ./external/glm-0.9.9.8/glm
-        ./external/glfw-3.3.4/include
-        ./external/freetype-2.11.0/devel
+        ./external/glm-1.0.2
+        ./external/glfw-3.4/include
+        ./external/freetype-2.14.1/devel
     )
     target_link_libraries(
         fcpp PUBLIC
@@ -300,7 +304,7 @@ if(FCPP_BUILD_TESTS)
     endif()
     FetchContent_Declare(
       googletest
-      URL https://github.com/google/googletest/archive/f5e592d8ee5ffb1d9af5be7f715ce3576b8bf9c4.zip
+      URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
     )
     set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(googletest)
@@ -352,6 +356,7 @@ if(FCPP_BUILD_TESTS)
         fcpp_test(test/data/bloom.cpp)
         fcpp_test(test/data/color.cpp)
         fcpp_test(test/data/field.cpp)
+        fcpp_test(test/data/gps_trace.cpp)
         fcpp_test(test/data/hyperloglog.cpp)
         fcpp_test(test/data/ordered.cpp)
         fcpp_test(test/data/tuple.cpp)

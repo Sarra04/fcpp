@@ -267,22 +267,30 @@ if(FCPP_BUILD_GL)
         ./external/glad-core-3.3/include/glad/glad.h
         ./external/glad-core-3.3/src/glad.c
     )
-    add_subdirectory(./external/glm-1.0.2)
-    add_subdirectory(./external/glfw-3.4)
+    FetchContent_Declare(
+        glm
+        GIT_REPOSITORY https://github.com/g-truc/glm.git
+        GIT_TAG        1.0.3
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_Declare(
+        glfw
+        GIT_REPOSITORY https://github.com/glfw/glfw.git
+        GIT_TAG        3.4
+        GIT_SHALLOW    TRUE
+    )
     FetchContent_Declare(
         freetype
         GIT_REPOSITORY https://github.com/freetype/freetype.git
         GIT_TAG        VER-2-14-3
         GIT_SHALLOW    TRUE
     )
-    FetchContent_MakeAvailable(freetype)
+    FetchContent_MakeAvailable(glm glfw freetype)
     target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
     target_include_directories(
         fcpp PUBLIC
         ./external
         ./external/glad-core-3.3/include
-        ./external/glm-1.0.2
-        ./external/glfw-3.4/include
     )
     target_link_libraries(
         fcpp PUBLIC

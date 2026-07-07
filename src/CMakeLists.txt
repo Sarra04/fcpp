@@ -112,9 +112,10 @@ endfunction()
 # MAIN PROJECT SETUP #
 ######################
 
+include(FetchContent)
 project(
     fcpp
-    VERSION 0.8.1
+    VERSION 0.9.2
     DESCRIPTION "FieldCalc++ is an efficient C++14 implementation of the Pure Field Calculus."
 )
 option(FCPP_BUILD_GL        "Build OpenGL features."          OFF)
@@ -268,7 +269,13 @@ if(FCPP_BUILD_GL)
     )
     add_subdirectory(./external/glm-1.0.2)
     add_subdirectory(./external/glfw-3.4)
-    add_subdirectory(./external/freetype-2.14.1)
+    FetchContent_Declare(
+        freetype
+        GIT_REPOSITORY https://github.com/freetype/freetype.git
+        GIT_TAG        VER-2-14-3
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(freetype)
     target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
     target_include_directories(
         fcpp PUBLIC
@@ -276,7 +283,6 @@ if(FCPP_BUILD_GL)
         ./external/glad-core-3.3/include
         ./external/glm-1.0.2
         ./external/glfw-3.4/include
-        ./external/freetype-2.14.1/devel
     )
     target_link_libraries(
         fcpp PUBLIC
@@ -296,8 +302,6 @@ endif(FCPP_BUILD_GL)
 ################
 
 if(FCPP_BUILD_TESTS)
-    cmake_minimum_required(VERSION 3.14)
-    include(FetchContent)
     if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
         cmake_policy(SET CMP0135 NEW)
     endif()

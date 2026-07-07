@@ -140,7 +140,7 @@ struct simulated_positioner {
             //! @brief Position at a given time.
             position_type position(times_t t) const {
                 real_t dt = t - m_last;
-                if (dt == 0) {
+                if (dt == 0 or m_last == TIME_MIN) {
                     return m_x;
                 }
                 if (m_f == 0) {
@@ -166,7 +166,7 @@ struct simulated_positioner {
             //! @brief Velocity at a given time.
             position_type velocity(times_t t) const {
                 real_t dt = t - m_last;
-                if (dt == 0) {
+                if (dt == 0 or m_last == TIME_MIN) {
                     return m_v;
                 }
                 if (m_f == 0) {
@@ -202,7 +202,7 @@ struct simulated_positioner {
 
             //! @brief Total acceleration at a given time.
             position_type acceleration(times_t t) const {
-                if (m_f == 0) {
+                if (m_f == 0 or m_last == TIME_MIN) {
                     return m_a;
                 }
                 if (m_f == INF) {

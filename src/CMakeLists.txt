@@ -149,7 +149,6 @@ set(
     lib/component/identifier.cpp
     lib/component/logger.cpp
     lib/component/randomizer.cpp
-    lib/component/scheduler.cpp
     lib/component/storage.cpp
     lib/component/timer.cpp
     lib/coordination.cpp
@@ -228,6 +227,7 @@ endif(FCPP_BUILD_GL)
 
 add_library(
         stb_image
+        ./external/stb_image/stb_image_write.h
         ./external/stb_image/stb_image.h
         ./external/stb_image/stb_image.cpp
         ./external/rapidxml-1.13/rapidxml.hpp
@@ -343,7 +343,6 @@ if(FCPP_BUILD_TESTS)
         fcpp_test(test/component/identifier.cpp)
         fcpp_test(test/component/logger.cpp)
         fcpp_test(test/component/randomizer.cpp)
-        fcpp_test(test/component/scheduler.cpp)
         fcpp_test(test/component/storage.cpp)
         fcpp_test(test/component/timer.cpp)
         fcpp_test(test/coordination/basics.cpp)

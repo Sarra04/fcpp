@@ -1,8 +1,8 @@
-// Copyright © 2021 Giorgio Audrito. All Rights Reserved.
+// Copyright © 2023 Giorgio Audrito. All Rights Reserved.
 
 #include "gtest/gtest.h"
 
-#include "lib/component/scheduler.hpp"
+#include "lib/component/timer.hpp"
 #include "lib/component/storage.hpp"
 #include "lib/deployment/hardware_identifier.hpp"
 
@@ -50,7 +50,7 @@ using combo1 = component::combine_spec<
 template <int O>
 using combo2 = component::combine_spec<
     worker,
-    component::scheduler<round_schedule<seq_per>>,
+    component::timer<round_schedule<seq_per>>,
     component::hardware_identifier<parallel<(O & 1) == 1>>,
     component::base<parallel<(O & 1) == 1>>
 >;
@@ -79,5 +79,5 @@ MULTI_TEST(HardwareIdentifierTest, Schedule, O, 1) {
     network.update();
     EXPECT_EQ(5.5f, network.next());
     network.update();
-    EXPECT_EQ(TIME_MAX, network.next());
+    EXPECT_GE(network.next(), TIME_FAR);
 }

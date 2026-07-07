@@ -253,8 +253,8 @@ struct base {
             //! @brief Updates the internal status of net component.
             void update() {}
 
-            //! @brief Runs the events until a given end. Should NEVER be overridden.
-            void run(times_t end = TIME_MAX) {
+            //! @brief Runs the events until a given maximum time. Should NEVER be overridden.
+            void run(times_t end = TIME_FAR) {
                 times_t nxt;
                 while ((nxt = as_final().next()) < end) {
                     m_next_update = nxt;

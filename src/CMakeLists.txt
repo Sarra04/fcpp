@@ -233,11 +233,14 @@ add_library(
         ./external/rapidxml-1.13/rapidxml.hpp
 )
 target_include_directories(stb_image PUBLIC ./external/stb_image)
+add_library(rapidxml INTERFACE)
+target_include_directories(rapidxml INTERFACE ./external/rapidxml-1.13)
 if(FCPP_BUILD_MPI)
     find_package(MPI REQUIRED)
     target_link_libraries(
         fcpp PUBLIC
         stb_image
+        rapidxml
         ${MPI_LIBRARIES}
     )
     target_include_directories(fcpp PUBLIC ${MPI_INCLUDE_PATH})
@@ -251,6 +254,7 @@ else()
     target_link_libraries(
         fcpp PUBLIC
         stb_image
+        rapidxml
     )
 endif(FCPP_BUILD_MPI)
 set_target_properties(${target_name} PROPERTIES PREFIX "run/")
@@ -267,6 +271,7 @@ if(FCPP_BUILD_GL)
         ./external/glad-core-3.3/include/glad/glad.h
         ./external/glad-core-3.3/src/glad.c
     )
+    target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
     FetchContent_Declare(
         glm
         GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -286,12 +291,6 @@ if(FCPP_BUILD_GL)
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(glm glfw freetype)
-    target_include_directories(glad PUBLIC ./external/glad-core-3.3/include)
-    target_include_directories(
-        fcpp PUBLIC
-        ./external
-        ./external/glad-core-3.3/include
-    )
     target_link_libraries(
         fcpp PUBLIC
         glad

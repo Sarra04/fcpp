@@ -940,6 +940,11 @@ struct displayer {
             template <typename S, typename T>
             explicit net(common::tagged_tuple<S,T> const& t) :
                 P::net{ t },
+                m_offs( 0 ),
+                m_fact( 1 ),
+                m_inv( 1 ),
+                m_last_update( 0 ),
+                m_next_update( 0 ),
                 m_threads( common::get_or<tags::threads>(t, FCPP_THREADS) ),
                 m_refresh{ 0 },
                 m_step( common::get_or<tags::refresh_rate>(t, FCPP_REFRESH_RATE) ),
@@ -958,12 +963,15 @@ struct displayer {
                 m_deltaTime{ 0.0f },
                 m_lastFrame{ 0.0f },
                 m_lastFraction{ 0.0f },
+                m_viewport_changed{ true },
                 m_FPS{ 0 } {
                     m_frameCounts.push_back(0);
                     constexpr auto max = details::numseq_to_vec<area>::max;
                     constexpr auto min = details::numseq_to_vec<area>::min;
                     m_viewport_max = details::vec_to_glm(common::get_or<tags::area_max>(t, max), -INF);
                     m_viewport_min = details::vec_to_glm(common::get_or<tags::area_min>(t, min), +INF);
+                    m_viewport_min[2] = m_viewport_max[2] = 0;
+                    m_viewport_fixed = m_viewport_max.x > m_viewport_min.x and m_viewport_max.y > m_viewport_min.y;
                     maybe_set_color_theme(color_theme{});
                 }
 
@@ -973,48 +981,39 @@ struct displayer {
              * Should correspond to the next time also during updates.
              */
             times_t next() const {
-                times_t nxt = P::net::next();
-                if (nxt == TIME_MAX and P::net::frequency() > 0) return TIME_MAX;
+                times_t nxt = warped_next();
+                if (nxt == TIME_MAX and frequency() > 0) return TIME_MAX;
                 return std::min(std::min(m_refresh, P::net::real_time()), nxt);
             }
 
             //! @brief Updates the internal status of net component.
             void update() {
                 times_t rt = std::min(m_refresh, P::net::real_time());
-                if (rt < P::net::next()) {
-                    times_t t = P::net::internal_time();
+                if (rt < warped_next()) {
+                    times_t t = internal_time();
                     auto n_beg = P::net::node_begin();
                     auto n_end = P::net::node_end();
                     PROFILE_COUNT("displayer");
                     if (not m_legenda) {
                         PROFILE_COUNT("displayer/nodes");
-                        if (rt == 0) {
-                            if (m_viewport_min.x > m_viewport_max.x) {
-                                common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
-                                    viewport_update(n_beg[i].second.cache_position(t));
-                                });
-                                double approx = 1;
-                                while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) > 2000 * approx * approx)
-                                    approx *= 10;
-                                while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) <= 20 * approx * approx)
-                                    approx /= 10;
-                                m_viewport_min.x = std::floor(m_viewport_min.x / approx) * approx;
-                                m_viewport_max.x = std::ceil(m_viewport_max.x / approx) * approx;
-                                m_viewport_min.y = std::floor(m_viewport_min.y / approx) * approx;
-                                m_viewport_max.y = std::ceil(m_viewport_max.y / approx) * approx;
-                            } else m_viewport_min[2] = m_viewport_max[2] = 0;
-                        } else {
-                            if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity()) highlightHoveredNode();
-                            common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
-                                n_beg[i].second.cache_position(t);
-                            });
-                        }
+                        if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity()) highlightHoveredNode();
+                        common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
+                            viewport_update(n_beg[i].second.cache_position(t));
+                        });
                         for (size_t i = 0; i < n_end-n_beg; ++i) n_beg[i].second.draw(m_links);
                     }
-                    if (rt == 0) {
-                        // stop simulated time
-                        P::net::frequency(0);
-                        // first frame only: set camera position, rotation, sensitivity
+                    if (m_viewport_changed) {
+                        // round viewport to a nice number
+                        double approx = 1;
+                        while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) > 2000 * approx * approx)
+                            approx *= 10;
+                        while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) <= 20 * approx * approx)
+                            approx /= 10;
+                        m_viewport_min.x = std::floor(m_viewport_min.x / approx) * approx;
+                        m_viewport_max.x = std::ceil(m_viewport_max.x / approx) * approx;
+                        m_viewport_min.y = std::floor(m_viewport_min.y / approx) * approx;
+                        m_viewport_max.y = std::ceil(m_viewport_max.y / approx) * approx;
+                        // set camera position, rotation, sensitivity
                         glm::vec3 viewport_size = m_viewport_max - m_viewport_min;
                         glm::vec3 camera_pos = (m_viewport_min + m_viewport_max) / 2.0f;
                         double dz = std::max(viewport_size.x/m_renderer.getAspectRatio(), viewport_size.y);
@@ -1028,6 +1027,11 @@ struct displayer {
                         while (grid_scale * 200 < diagonal) grid_scale *= 10;
                         while (grid_scale * 20 > diagonal) grid_scale /= 10;
                         m_renderer.makeGrid(m_viewport_min, m_viewport_max, grid_scale);
+                        m_viewport_changed = false;
+                    }
+                    if (rt == 0) {
+                        // stop simulated time
+                        frequency(0);
                         m_renderer.setGridTexture(m_texture);
                         setInternalCallbacks(); // call this after m_renderer is initialized
                     }
@@ -1080,12 +1084,12 @@ struct displayer {
                             // Draw hovered node, simulation time (t) and FPS
                             if (m_hoveredNode != device_t(-1)) m_renderer.drawText("Node " + std::to_string(m_hoveredNode), 16.0f, m_renderer.getWindowHeight() - 16.0f, 0.25f);
                             std::string tt = "Simulation time: " + std::to_string(t);
-                            if (P::net::frequency() != 1 and P::net::frequency() != 0) {
+                            if (frequency() != 1 and frequency() != 0) {
                                 tt += " (";
-                                int f = P::net::frequency();
+                                int f = frequency();
                                 tt += std::to_string(f);
-                                if (P::net::frequency() < 1) tt += "." + std::to_string(int((P::net::frequency() - f)*100));
-                                else if (P::net::frequency() < 10) tt += "." + std::to_string(int((P::net::frequency() - f)*10));
+                                if (frequency() < 1) tt += "." + std::to_string(int((frequency() - f)*100));
+                                else if (frequency() < 10) tt += "." + std::to_string(int((frequency() - f)*10));
                                 tt += "x)";
                             }
                             m_renderer.drawText(tt, 16.0f, 16.0f, 0.25f);
@@ -1114,7 +1118,17 @@ struct displayer {
                         // Update m_refresh
                         m_refresh = rt + m_step;
                     }
-                } else P::net::update();
+                } else {
+                    m_last_update = m_next_update;
+                    P::net::update();
+                }
+            }
+
+            //! @brief A measure of the internal time clock.
+            times_t internal_time() const {
+                if (m_last_update == m_next_update or m_fact == 0 or m_inv == 0 or m_offs == TIME_MAX) return m_last_update;
+                times_t t = (P::net::real_time() - m_offs) * m_fact;
+                return std::max(std::min(t, m_next_update), m_last_update);
             }
 
             //! @brief Returns net's renderer object.
@@ -1144,14 +1158,17 @@ struct displayer {
 
             //! @brief Updates the viewport adding a position to it.
             void viewport_update(glm::vec3 pos) {
-                for (int i=0; i<3; ++i) {
+                if (m_viewport_fixed) return;
+                for (int i=0; i<2; ++i) {
                     if (pos[i] < m_viewport_min[i]) {
                         common::lock_guard<parallel> l(m_viewport_mutex);
                         m_viewport_min[i] = pos[i];
+                        m_viewport_changed = true;
                     }
                     if (pos[i] > m_viewport_max[i]) {
                         common::lock_guard<parallel> l(m_viewport_mutex);
                         m_viewport_max[i] = pos[i];
+                        m_viewport_changed = true;
                     }
                 }
             }
@@ -1419,8 +1436,8 @@ struct displayer {
                 switch (key) {
                     // terminate program
                     case GLFW_KEY_ESCAPE:
-                        if (P::net::frequency() == 0) P::net::frequency(1);
-                        P::net::terminate();
+                        if (frequency() == 0) frequency(1);
+                        terminate();
                         break;
                     // show/hide links
                     case GLFW_KEY_L:
@@ -1444,23 +1461,23 @@ struct displayer {
                     case GLFW_KEY_P:
                         if (first) {
                             // play/pause simulation
-                            real_t f = P::net::frequency();
-                            P::net::frequency(f == 0 ? 1 : 0);
+                            real_t f = frequency();
+                            frequency(f == 0 ? 1 : 0);
                         }
                         break;
                     // accelerate simulation
                     case GLFW_KEY_O:
-                        P::net::frequency(pow(4.0, (mods & GLFW_MOD_SHIFT) > 0 ? deltaTime/5 : deltaTime)*P::net::frequency());
+                        frequency(pow(4.0, (mods & GLFW_MOD_SHIFT) > 0 ? deltaTime/5 : deltaTime)*frequency());
                         break;
                     // decelerate simulation
                     case GLFW_KEY_I:
-                        P::net::frequency(pow(0.25, (mods & GLFW_MOD_SHIFT) > 0 ? deltaTime/5 : deltaTime)*P::net::frequency());
+                        frequency(pow(0.25, (mods & GLFW_MOD_SHIFT) > 0 ? deltaTime/5 : deltaTime)*frequency());
                         break;
                     default:
                         // pass key to renderer
                         if (not m_renderer.keyboardInput(key, first, deltaTime, mods) and first and not justoutoflegenda and key < GLFW_KEY_LEFT_SHIFT) {
                             // unrecognised key: stop simulation for legenda
-                            P::net::frequency(0);
+                            frequency(0);
                             m_hoveredNode = -1;
                             m_legenda = true;
                             m_renderer.setStandardCursor(false);
@@ -1477,6 +1494,46 @@ struct displayer {
                 for (int key : m_key_stroked)
                     keyboardInput(key, false, m_deltaTime, mods);
             }
+
+            //! @brief Returns the warping factor applied to following schedulers.
+            real_t frequency() const {
+                return m_fact;
+            }
+
+            //! @brief Sets the warping factor applied to following schedulers.
+            void frequency(real_t f) {
+                assert(f >= 0);
+                if (m_offs == TIME_MAX) return; // execution terminated, nothing to do
+                if (f > 0 and m_fact > 0)
+                    m_offs += m_last_update * (m_inv - 1/f);
+                else if (f > 0) // resume
+                    m_offs = P::net::as_final().next() - m_next_update / f;
+                m_fact = f;
+                m_inv = 1/f;
+            }
+
+            //! @brief Terminate round executions.
+            void terminate() {
+                m_offs = TIME_MAX;
+            }
+
+            //! @brief Returns next event to schedule for the net component, warped with frequency.
+            times_t warped_next() const {
+                m_next_update = P::net::next();
+                return m_offs < TIME_MAX and m_fact > 0 and m_next_update < TIME_MAX ? m_next_update * m_inv + m_offs : TIME_MAX;
+            }
+
+            //! @brief Offset between the following schedule and actual times.
+            times_t m_offs;
+
+            //! @brief Warping factor and inverse for the following schedule.
+            real_t m_fact, m_inv;
+
+            //! @brief The internal time of the last update.
+            times_t m_last_update;
+
+            //! @brief The internal time of the next update.
+            mutable times_t m_next_update;
 
             //! @brief The number of threads to be used.
             size_t const m_threads;
@@ -1552,6 +1609,12 @@ struct displayer {
 
             //! @brief Boundaries of the viewport.
             glm::vec3 m_viewport_min, m_viewport_max;
+
+            //! @brief Whether the viewport has changed since last frame.
+            bool m_viewport_changed;
+
+            //! @brief Whether the viewport is fixed (i.e., it cannot change during the simulation).
+            bool m_viewport_fixed;
 
             //! @brief Vector representing the raycast direction (in world space) generated while moving the cursor.
             glm::vec3 m_rayCast;

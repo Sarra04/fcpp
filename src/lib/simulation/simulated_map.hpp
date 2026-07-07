@@ -98,8 +98,8 @@ public:
         unsigned char *p = stbi_load(real_path.c_str(), &bitmap_width, &bitmap_height,&channels_per_pixel, 0);
 */
 
-
         m_map_rooms = std::vector<std::vector<std::vector<int>>>(m_bitmap.size(),std::vector<std::vector<int>>(m_bitmap[0].size(),std::vector<int>(2, 0)));
+        if (is_empty()) return;
         auto rooms_function = std::function<bool(int, int, int, int, std::vector<std::vector<bool>> &)>(
                 [&](int x, int y, int bitmap, int obstacle,
                     std::vector<std::vector<bool>> &visited_matrix) {

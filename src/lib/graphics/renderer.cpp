@@ -450,115 +450,112 @@ void renderer::swapAndNext() {
 }
 
 void renderer::makeGrid(glm::vec3 gridMin, glm::vec3 gridMax, double gridScale) {
-    // Initialize grid and plane buffers if they are not already
-    if (!s_gridIsReady) {
-        // The grid is initiated
-        s_gridIsReady = true;
+    // The grid is initiated
+    s_gridIsReady = true;
 
-        // Calculate data for mesh generation
-        int approx{ (gridMax.x - gridMin.x) * (gridMax.y - gridMin.y) > 2000 * gridScale * gridScale ? 10 : 1 };
-        int grid_min_x = std::ceil(gridMin.x / gridScale / approx) * approx;
-        int grid_max_x = std::floor(gridMax.x / gridScale / approx) * approx;
-        int grid_min_y = std::ceil(gridMin.y / gridScale / approx) * approx;
-        int grid_max_y = std::floor(gridMax.y / gridScale / approx) * approx;
-        int numX{ grid_max_x - grid_min_x + 1 };
-        int numY{ grid_max_y - grid_min_y + 1 };
+    // Calculate data for mesh generation
+    int approx{ (gridMax.x - gridMin.x) * (gridMax.y - gridMin.y) > 2000 * gridScale * gridScale ? 10 : 1 };
+    int grid_min_x = std::ceil(gridMin.x / gridScale / approx) * approx;
+    int grid_max_x = std::floor(gridMax.x / gridScale / approx) * approx;
+    int grid_min_y = std::ceil(gridMin.y / gridScale / approx) * approx;
+    int grid_max_y = std::floor(gridMax.y / gridScale / approx) * approx;
+    int numX{ grid_max_x - grid_min_x + 1 };
+    int numY{ grid_max_y - grid_min_y + 1 };
 
-        int highlighter{ 10 }; // the module required by a line to be highlighted
+    int highlighter{ 10 }; // the module required by a line to be highlighted
 
-        int numHighX{ (grid_max_x - grid_max_x % highlighter - grid_min_x) / highlighter + 1 };
-        int numHighY{ (grid_max_y - grid_max_y % highlighter - grid_min_y) / highlighter + 1 };
+    int numHighX{ (grid_max_x - grid_max_x % highlighter - grid_min_x) / highlighter + 1 };
+    int numHighY{ (grid_max_y - grid_max_y % highlighter - grid_min_y) / highlighter + 1 };
 
-        // Generating grid mesh
-        int i{ 0 }; // for putting vertices into gridMesh
-        int j{ 0 }; // for putting indices into gridHighMesh
-        int k{ 0 }; // for putting indices into gridNormMesh
-        float gridMesh[numX * 6 + numY * 6]; // will contain the vertex data of the grid
-        int gridNormIndex[(numX - numHighX) * 2 + (numY - numHighY) * 2]; // will contain the index data of the normal lines of the grid
-        int gridHighIndex[numHighX * 2 + numHighY * 2]; // will contain the index data of the highlighted lines of the grid
-        for (int x = grid_min_x; x <= grid_max_x; ++x) {
-            gridMesh[0 + i * 6] = (float)(x * gridScale);
-            gridMesh[1 + i * 6] = gridMin.y;
-            gridMesh[2 + i * 6] = 0.0f;
-            gridMesh[3 + i * 6] = (float)(x * gridScale);
-            gridMesh[4 + i * 6] = gridMax.y;
-            gridMesh[5 + i * 6] = 0.0f;
-            if (x % highlighter == 0) {
-                gridHighIndex[j * 2] = i * 2;
-                gridHighIndex[1 + j * 2] = i * 2 + 1;
-                ++j;
-            }
-            else {
-                gridNormIndex[k * 2] = i * 2;
-                gridNormIndex[1 + k * 2] = i * 2 + 1;
-                ++k;
-            }
-            ++i;
+    // Generating grid mesh
+    int i{ 0 }; // for putting vertices into gridMesh
+    int j{ 0 }; // for putting indices into gridHighMesh
+    int k{ 0 }; // for putting indices into gridNormMesh
+    float gridMesh[numX * 6 + numY * 6]; // will contain the vertex data of the grid
+    int gridNormIndex[(numX - numHighX) * 2 + (numY - numHighY) * 2]; // will contain the index data of the normal lines of the grid
+    int gridHighIndex[numHighX * 2 + numHighY * 2]; // will contain the index data of the highlighted lines of the grid
+    for (int x = grid_min_x; x <= grid_max_x; ++x) {
+        gridMesh[0 + i * 6] = (float)(x * gridScale);
+        gridMesh[1 + i * 6] = gridMin.y;
+        gridMesh[2 + i * 6] = 0.0f;
+        gridMesh[3 + i * 6] = (float)(x * gridScale);
+        gridMesh[4 + i * 6] = gridMax.y;
+        gridMesh[5 + i * 6] = 0.0f;
+        if (x % highlighter == 0) {
+            gridHighIndex[j * 2] = i * 2;
+            gridHighIndex[1 + j * 2] = i * 2 + 1;
+            ++j;
         }
-        for (int y = grid_min_y; y <= grid_max_y; ++y) {
-            gridMesh[0 + i * 6] = gridMin.x;
-            gridMesh[1 + i * 6] = (float)(y * gridScale);
-            gridMesh[2 + i * 6] = 0.0f;
-            gridMesh[3 + i * 6] = gridMax.x;
-            gridMesh[4 + i * 6] = (float)(y * gridScale);
-            gridMesh[5 + i * 6] = 0.0f;
-            if (y % highlighter == 0) {
-                gridHighIndex[j * 2] = i * 2;
-                gridHighIndex[1 + j * 2] = i * 2 + 1;
-                ++j;
-            }
-            else {
-                gridNormIndex[k * 2] = i * 2;
-                gridNormIndex[1 + k * 2] = i * 2 + 1;
-                ++k;
-            }
-            ++i;
+        else {
+            gridNormIndex[k * 2] = i * 2;
+            gridNormIndex[1 + k * 2] = i * 2 + 1;
+            ++k;
         }
-
-        // Storing grid mesh
-        glBindVertexArray(m_meshVAO[(int)vertex::grid]);
-        glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::grid]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(gridMesh), gridMesh, GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::gridHigh]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gridHighIndex), gridHighIndex, GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::gridNorm]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gridNormIndex), gridNormIndex, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        s_gridNormIndexSize = sizeof(gridNormIndex);
-        s_gridHighIndexSize = sizeof(gridHighIndex);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-        // Generating plane mesh
-        float planeMesh[20]{
-            // vertex coords                                                        // texture coords
-            gridMin.x, gridMin.y, 0.0f, 0.0f, 0.0f,
-            gridMin.x, gridMax.y, 0.0f, 0.0f, 1.0f,
-            gridMax.x, gridMax.y, 0.0f, 1.0f, 1.0f,
-            gridMax.x, gridMin.y, 0.0f, 1.0f, 0.0f
-        };
-        int planeIndex[6]{
-            0, 1, 2,
-            2, 3, 0
-        };
-
-        // Storing plane mesh
-        glBindVertexArray(m_meshVAO[(int)vertex::plane]);
-        glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::plane]);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(planeMesh), planeMesh, GL_STATIC_DRAW);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::plane]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndex), planeIndex, GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-        glEnableVertexAttribArray(1);
-        s_planeIndexSize = sizeof(planeIndex);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-        glBindVertexArray(0);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        ++i;
     }
+    for (int y = grid_min_y; y <= grid_max_y; ++y) {
+        gridMesh[0 + i * 6] = gridMin.x;
+        gridMesh[1 + i * 6] = (float)(y * gridScale);
+        gridMesh[2 + i * 6] = 0.0f;
+        gridMesh[3 + i * 6] = gridMax.x;
+        gridMesh[4 + i * 6] = (float)(y * gridScale);
+        gridMesh[5 + i * 6] = 0.0f;
+        if (y % highlighter == 0) {
+            gridHighIndex[j * 2] = i * 2;
+            gridHighIndex[1 + j * 2] = i * 2 + 1;
+            ++j;
+        }
+        else {
+            gridNormIndex[k * 2] = i * 2;
+            gridNormIndex[1 + k * 2] = i * 2 + 1;
+            ++k;
+        }
+        ++i;
+    }
+
+    // Storing grid mesh
+    glBindVertexArray(m_meshVAO[(int)vertex::grid]);
+    glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::grid]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(gridMesh), gridMesh, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::gridHigh]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gridHighIndex), gridHighIndex, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::gridNorm]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(gridNormIndex), gridNormIndex, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    s_gridNormIndexSize = sizeof(gridNormIndex);
+    s_gridHighIndexSize = sizeof(gridHighIndex);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // Generating plane mesh
+    float planeMesh[20]{
+        // vertex coords                                                        // texture coords
+        gridMin.x, gridMin.y, 0.0f, 0.0f, 0.0f,
+        gridMin.x, gridMax.y, 0.0f, 0.0f, 1.0f,
+        gridMax.x, gridMax.y, 0.0f, 1.0f, 1.0f,
+        gridMax.x, gridMin.y, 0.0f, 1.0f, 0.0f
+    };
+    int planeIndex[6]{
+        0, 1, 2,
+        2, 3, 0
+    };
+
+    // Storing plane mesh
+    glBindVertexArray(m_meshVAO[(int)vertex::plane]);
+    glBindBuffer(GL_ARRAY_BUFFER, s_meshVBO[(int)vertex::plane]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeMesh), planeMesh, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, s_meshEBO[(int)index::plane]); // VAO stores EBO here; unbinding EBO before VAO is unbound will result in VAO pointing to no EBO
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(planeIndex), planeIndex, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    s_planeIndexSize = sizeof(planeIndex);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
 
 void renderer::drawGrid(float planeAlpha) const {

@@ -4,7 +4,7 @@
 
 #include "lib/component/base.hpp"
 #include "lib/component/identifier.hpp"
-#include "lib/component/scheduler.hpp"
+#include "lib/component/timer.hpp"
 
 #include "test/helper.hpp"
 
@@ -65,7 +65,7 @@ template <int O>
 using combo2 = component::combine_spec<
     exposer,
     worker,
-    component::scheduler<round_schedule<seq_per>>,
+    component::timer<round_schedule<seq_per>>,
     component::identifier<
         parallel<(O & 1) == 1>,
         synchronised<(O & 2) == 2>
@@ -138,7 +138,7 @@ MULTI_TEST(IdentifierTest, Parallel, O, 2) {
     EXPECT_EQ(1, (int)network.node_count(0));
     EXPECT_EQ(100, network.node_end() - network.node_begin());
     EXPECT_EQ(42, (int)network.node_at(42).uid);
-    EXPECT_EQ(1.5f, network.next());
+    EXPECT_FLOAT_EQ(1.5f, network.next());
     network.update();
     EXPECT_EQ(100, (int)network.node_size());
     EXPECT_EQ(0, (int)network.node_erase(222));

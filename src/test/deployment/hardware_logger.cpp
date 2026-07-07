@@ -6,7 +6,7 @@
 
 #include "gtest/gtest.h"
 
-#include "lib/component/scheduler.hpp"
+#include "lib/component/timer.hpp"
 #include "lib/component/storage.hpp"
 #include "lib/deployment/hardware_logger.hpp"
 #include "lib/deployment/hardware_identifier.hpp"
@@ -14,13 +14,6 @@
 #include "test/fake_os.hpp"
 #include "test/helper.hpp"
 
-namespace fcpp {
-    namespace component {
-        namespace tags {
-            struct start {};
-        }
-    }
-}
 
 using namespace fcpp;
 using namespace component::tags;
@@ -35,7 +28,7 @@ using seq_per = sequence::periodic<distribution::constant_n<times_t, 15, 10>, di
 
 template <int O>
 using combo1 = component::combine_spec<
-    component::scheduler<round_schedule<seq_per>>,
+    component::timer<round_schedule<seq_per>>,
     component::hardware_logger<tuple_store<tag,bool,gat,int>>,
     component::storage<tuple_store<tag,bool,gat,int>>,
     component::hardware_identifier<parallel<(O & 1) == 1>>,
@@ -74,7 +67,7 @@ MULTI_TEST(HardwareLoggerTest, Main, O, 1) {
         }
         EXPECT_EQ(5.5f, network.next());
         network.run();
-        EXPECT_EQ(TIME_MAX, network.next());
+        EXPECT_GE(network.next(), TIME_FAR);
     }
     std::string line;
     getline(s, line);
@@ -132,6 +125,6 @@ MULTI_TEST(HardwareLoggerTest, Nulls, O, 1) {
         }
         EXPECT_EQ(5.5f, network.next());
         network.run();
-        EXPECT_EQ(TIME_MAX, network.next());
+        EXPECT_GE(network.next(), TIME_FAR);
     }
 }

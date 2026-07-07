@@ -101,7 +101,10 @@ void main::operator()(node_t& node, times_t)
 #define PARGS           TIER(tier), node_t& node, trace_t call_point
 
 //! @brief Macro inserting the default arguments at function call.
-#define PCALL           TIER(tier){}, node, __COUNTER__
+#define PCALL           TIER(tier){}, node, __COUNTER__-trace_counter
+
+//! @brief Macro inserting inlining arguments at function call, within a function missing the CODE macro.
+#define PINLINE         TIER(tier){}, node, call_point
 
 //! @brief Macro adding placement annotations to a local type.
 #define place(...)      placed<tier, __VA_ARGS__>
@@ -121,6 +124,7 @@ void main::operator()(node_t& node, times_t)
  */
 #define PMAIN()                                             \
 struct main {                                               \
+    static constexpr int trace_counter = __COUNTER__+1;     \
     template <typename node_t>                              \
     inline void operator()(node_t&, times_t);               \
     template <typename node_t>                              \
@@ -161,18 +165,19 @@ void main::body(node_t& node)
  * as a property associated with @ref fcpp::component::tags::node_tier .
  * Otherwise, the main is compiled with the `FCPP_TIER` defining the value for `tier`.
  */
-#define PMAIN()                                     \
-struct main {                                       \
-    template <typename node_t>                      \
-    inline void operator()(node_t&, times_t);       \
-    template <tier_t tier, typename node_t>         \
-    void body(node_t&);                             \
-};                                                  \
-template <typename node_t>                          \
-void main::operator()(node_t& node, times_t) {      \
-    body<(1<<FCPP_TIER)>(node);                     \
-}                                                   \
-template <tier_t tier, typename node_t>             \
+#define PMAIN()                                         \
+struct main {                                           \
+    static constexpr int trace_counter = __COUNTER__+1; \
+    template <typename node_t>                          \
+    inline void operator()(node_t&, times_t);           \
+    template <tier_t tier, typename node_t>             \
+    void body(node_t&);                                 \
+};                                                      \
+template <typename node_t>                              \
+void main::operator()(node_t& node, times_t) {          \
+    body<(1<<FCPP_TIER)>(node);                         \
+}                                                       \
+template <tier_t tier, typename node_t>                 \
 void main::body(node_t& node)
 
 #endif

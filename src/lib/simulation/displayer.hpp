@@ -963,12 +963,15 @@ struct displayer {
                 m_deltaTime{ 0.0f },
                 m_lastFrame{ 0.0f },
                 m_lastFraction{ 0.0f },
+                m_viewport_changed{ true },
                 m_FPS{ 0 } {
                     m_frameCounts.push_back(0);
                     constexpr auto max = details::numseq_to_vec<area>::max;
                     constexpr auto min = details::numseq_to_vec<area>::min;
                     m_viewport_max = details::vec_to_glm(common::get_or<tags::area_max>(t, max), -INF);
                     m_viewport_min = details::vec_to_glm(common::get_or<tags::area_min>(t, min), +INF);
+                    m_viewport_min[2] = m_viewport_max[2] = 0;
+                    m_viewport_fixed = m_viewport_max.x > m_viewport_min.x and m_viewport_max.y > m_viewport_min.y;
                     maybe_set_color_theme(color_theme{});
                 }
 
@@ -993,33 +996,24 @@ struct displayer {
                     PROFILE_COUNT("displayer");
                     if (not m_legenda) {
                         PROFILE_COUNT("displayer/nodes");
-                        if (rt == 0) {
-                            if (m_viewport_min.x > m_viewport_max.x) {
-                                common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
-                                    viewport_update(n_beg[i].second.cache_position(t));
-                                });
-                                double approx = 1;
-                                while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) > 2000 * approx * approx)
-                                    approx *= 10;
-                                while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) <= 20 * approx * approx)
-                                    approx /= 10;
-                                m_viewport_min.x = std::floor(m_viewport_min.x / approx) * approx;
-                                m_viewport_max.x = std::ceil(m_viewport_max.x / approx) * approx;
-                                m_viewport_min.y = std::floor(m_viewport_min.y / approx) * approx;
-                                m_viewport_max.y = std::ceil(m_viewport_max.y / approx) * approx;
-                            } else m_viewport_min[2] = m_viewport_max[2] = 0;
-                        } else {
-                            if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity()) highlightHoveredNode();
-                            common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
-                                n_beg[i].second.cache_position(t);
-                            });
-                        }
+                        if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity()) highlightHoveredNode();
+                        common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
+                            viewport_update(n_beg[i].second.cache_position(t));
+                        });
                         for (size_t i = 0; i < n_end-n_beg; ++i) n_beg[i].second.draw(m_links);
                     }
-                    if (rt == 0) {
-                        // stop simulated time
-                        frequency(0);
-                        // first frame only: set camera position, rotation, sensitivity
+                    if (m_viewport_changed) {
+                        // round viewport to a nice number
+                        double approx = 1;
+                        while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) > 2000 * approx * approx)
+                            approx *= 10;
+                        while ((m_viewport_max.x - m_viewport_min.x) * (m_viewport_max.y - m_viewport_min.y) <= 20 * approx * approx)
+                            approx /= 10;
+                        m_viewport_min.x = std::floor(m_viewport_min.x / approx) * approx;
+                        m_viewport_max.x = std::ceil(m_viewport_max.x / approx) * approx;
+                        m_viewport_min.y = std::floor(m_viewport_min.y / approx) * approx;
+                        m_viewport_max.y = std::ceil(m_viewport_max.y / approx) * approx;
+                        // set camera position, rotation, sensitivity
                         glm::vec3 viewport_size = m_viewport_max - m_viewport_min;
                         glm::vec3 camera_pos = (m_viewport_min + m_viewport_max) / 2.0f;
                         double dz = std::max(viewport_size.x/m_renderer.getAspectRatio(), viewport_size.y);
@@ -1033,6 +1027,11 @@ struct displayer {
                         while (grid_scale * 200 < diagonal) grid_scale *= 10;
                         while (grid_scale * 20 > diagonal) grid_scale /= 10;
                         m_renderer.makeGrid(m_viewport_min, m_viewport_max, grid_scale);
+                        m_viewport_changed = false;
+                    }
+                    if (rt == 0) {
+                        // stop simulated time
+                        frequency(0);
                         m_renderer.setGridTexture(m_texture);
                         setInternalCallbacks(); // call this after m_renderer is initialized
                     }
@@ -1159,14 +1158,17 @@ struct displayer {
 
             //! @brief Updates the viewport adding a position to it.
             void viewport_update(glm::vec3 pos) {
-                for (int i=0; i<3; ++i) {
+                if (m_viewport_fixed) return;
+                for (int i=0; i<2; ++i) {
                     if (pos[i] < m_viewport_min[i]) {
                         common::lock_guard<parallel> l(m_viewport_mutex);
                         m_viewport_min[i] = pos[i];
+                        m_viewport_changed = true;
                     }
                     if (pos[i] > m_viewport_max[i]) {
                         common::lock_guard<parallel> l(m_viewport_mutex);
                         m_viewport_max[i] = pos[i];
+                        m_viewport_changed = true;
                     }
                 }
             }
@@ -1435,7 +1437,7 @@ struct displayer {
                     // terminate program
                     case GLFW_KEY_ESCAPE:
                         if (frequency() == 0) frequency(1);
-                        P::net::terminate();
+                        terminate();
                         break;
                     // show/hide links
                     case GLFW_KEY_L:
@@ -1508,6 +1510,11 @@ struct displayer {
                     m_offs = P::net::as_final().next() - m_next_update / f;
                 m_fact = f;
                 m_inv = 1/f;
+            }
+
+            //! @brief Terminate round executions.
+            void terminate() {
+                m_offs = TIME_MAX;
             }
 
             //! @brief Returns next event to schedule for the net component, warped with frequency.
@@ -1602,6 +1609,12 @@ struct displayer {
 
             //! @brief Boundaries of the viewport.
             glm::vec3 m_viewport_min, m_viewport_max;
+
+            //! @brief Whether the viewport has changed since last frame.
+            bool m_viewport_changed;
+
+            //! @brief Whether the viewport is fixed (i.e., it cannot change during the simulation).
+            bool m_viewport_fixed;
 
             //! @brief Vector representing the raycast direction (in world space) generated while moving the cursor.
             glm::vec3 m_rayCast;

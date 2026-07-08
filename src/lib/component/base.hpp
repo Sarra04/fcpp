@@ -335,8 +335,8 @@ namespace details {
     template <typename F, template <class...> class... Cs>
     struct combine;
 
-    template <template <class...> class F, typename... Ts>
-    struct combine<F<Ts...>> : public base<Ts...>::template component<F<Ts...>> {};
+    template <template <class...> class F, typename... Ts, template <class...> class C>
+    struct combine<F<Ts...>, C> : public C<Ts...>::template component<F<Ts...>> {};
 
     template <template <class...> class F, typename... Ts, template <class...> class C, template <class...> class... Cs>
     struct combine<F<Ts...>, C, Cs...> : public C<Ts...>::template component<F<Ts...>, combine<F<Ts...>, Cs...>> {};
@@ -356,7 +356,7 @@ struct combine_spec : public details::combine_spec<combine_spec<Ts...>, Ts...> {
 /**
  * @brief Combines components into a single templated object.
  *
- * @param Ts Template components to chain together (`base` is implied as last).
+ * @param Ts Template components to chain together (the last must be a `base`).
  */
 template <template<class...> class... Cs>
 struct combine {
@@ -372,7 +372,7 @@ struct combine {
  * Example of intended usage:
  * ~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
  * namespace component {
- *   DECLARE_COMBINE(mycombo, calculus, exporter, storage, ...);
+ *   DECLARE_COMBINE(mycombo, calculus, exporter, storage, ..., base);
  *   DECLARE_OPTIONS(myopt, tags::program<myprogram>, tags::dimension<2>, ...);
  *   mycombo<myopt>::net network;
  * }
@@ -390,7 +390,7 @@ struct combine {
  * Example of intended usage:
  * ~~~~~~~~~~~~~~~~~~~~~~~~~{.cpp}
  * namespace component {
- *   DECLARE_COMBINE(mycombo, calculus, exporter, storage, ...);
+ *   DECLARE_COMBINE(mycombo, calculus, exporter, storage, ..., base);
  *   DECLARE_OPTIONS(myopt, tags::program<myprogram>, tags::dimension<2>, ...);
  *   mycombo<myopt>::net network;
  * }

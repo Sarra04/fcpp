@@ -313,7 +313,7 @@ class info_window {
         );
     }
 
-    private:
+  private:
     //! @brief Produces a title given the list of UIDs.
     std::string get_title() {
         if (m_uid.size() == 1) return "node " + std::to_string(m_uid[0]);
@@ -322,8 +322,8 @@ class info_window {
         return s;
     }
 
-    //! @brief It sets the window callback.
-    void setCallback() {
+    //! @brief It sets the window callbacks.
+    void setCallbacks() {
         // Associates this (the info_window instance) to m_window
         glfwSetWindowUserPointer(m_renderer.getWindow(), this);
 
@@ -347,7 +347,7 @@ class info_window {
     //! @brief Main cycle.
     void draw_cycle() {
         m_renderer.initializeContext(false);
-        setCallback();
+        setCallbacks();
         while (m_running) {
             if (m_modified) {
                 draw();

@@ -395,7 +395,6 @@ namespace details {
         return s;
     }
 
-    //! @brief Hash iterable size as uint64_t so 32-bit and 64-bit nodes agree.
     template <typename T, typename S>
     hstream& iterable_serialize(hstream& s, T& x, S, wrapper<void> = {}) {
         s.write(static_cast<uint64_t>(x.size()));

@@ -12,7 +12,7 @@ TEST(UtilitiesTest, MakeIstream) {
     std::string s = "__tmp__", t;
     {
         std::ofstream os(s);
-        ASSERT_TRUE(os.is_open()) << "Failed to create write file! Error: " << std::strerror(errno);
+        ASSERT_TRUE(os.is_open());
         os << s << std::endl;
     }
     {

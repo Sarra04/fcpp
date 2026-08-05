@@ -128,7 +128,7 @@ struct graph_spawner {
             void read_nodes(std::shared_ptr<std::istream> is, init_tuple_type dist, times_t start) {
                 attributes_tuple_type row;
                 while (read_row(*is, row, typename attributes_tuple_type::tags{})) {
-                    using res_type = std::result_of_t<init_tuple_type(crand, common::tagged_tuple_t<>)>;
+                    using res_type = common::invoke_result_t<init_tuple_type, crand, common::tagged_tuple_t<>>;
                     using full_type = common::tagged_tuple_cat<attributes_tuple_type, res_type>;
                     full_type tt = row;
                     call_distribution(dist, get_generator(has_randomizer<P>{}, *this), tt, typename init_tuple_type::tags{});

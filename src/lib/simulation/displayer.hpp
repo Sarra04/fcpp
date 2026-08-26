@@ -322,6 +322,63 @@ class info_window {
         return s;
     }
 
+    //! @brief Number of header lines (0, or 2 if there are multiple UIDs).
+    int header_rows() const {
+        return m_uid.size() > 1 ? 2 : 0;
+    }
+
+    //! @brief If line i corresponds to a real value (not an empty separator).
+    bool is_data_row(size_t i) const {
+        return m_keys[i].find_first_not_of(' ') != std::string::npos;
+    }
+
+    //! @brief Vertical center (y-up coordinates of `drawText`) of line i.
+    float row_center_y(size_t i) {
+        return (1 - (i + header_rows() + 0.5f) / (m_keys.size() + header_rows())) * m_renderer.getWindowHeight();
+    }
+
+    //! @brief Find the column (uid index) at the x-coordinate.
+    static constexpr float m_char_px = 7.0f;
+    bool column_at(size_t row, float x, int& col) const {
+        float key_w = m_keys.empty() ? 0.f : m_keys[0].size() * m_char_px;
+        float x0 = 0.16f;
+        for (size_t j = 0; j < m_uid.size(); ++j) {
+            float left = x0 + key_w + m_spacing * j * m_char_px;
+            std::string v = trimmed(m_values[row][j]);
+            float right = left + v.size() * m_char_px;
+            if (x >= left and x < right) { col = (int)j; return true; }
+        }
+        return false;
+    }
+
+    //! @brief From mouse coordinates (GLFW, y down) to (row, column) in the table.
+    bool point_to_cell(double mx, double my, int& row, int& col) {
+        float H = (float)m_renderer.getWindowHeight();
+        float y_up = H - (float)my;
+        float half_h = H / (2.0f * (m_keys.size() + header_rows()));
+        for (size_t i = 0; i < m_keys.size(); ++i) {
+            if (not is_data_row(i)) continue;
+            if (std::abs(y_up - row_center_y(i)) <= half_h) {
+                if (column_at(i, (float)mx, col)) { row = (int)i; return true; }
+                return false;
+            }
+        }
+        return false;
+    }
+
+    //! @brief Removes spaces at the beginning and end.
+    static std::string trimmed(std::string s) {
+        size_t a = s.find_first_not_of(' ');
+        size_t b = s.find_last_not_of(' ');
+        return a == std::string::npos ? "" : s.substr(a, b-a+1);
+    }
+
+    //! @brief Check that the cell is not empty.
+    bool is_editable_cell(int row, int col) {
+        if (row < 0 or col < 0) return false;
+        return not trimmed(m_values[row][col]).empty();
+    }
+
     //! @brief It sets the window callbacks.
     void setCallbacks() {
         // Associates this (the info_window instance) to m_window
@@ -342,11 +399,26 @@ class info_window {
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             }
         });
+
+        // Cursor callback
+        glfwSetCursorPosCallback(m_renderer.getWindow(), [](GLFWwindow* window, double xpos, double ypos) {
+            info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
+            int row = -1, col = -1;
+            bool over = info.point_to_cell(xpos, ypos, row, col);
+            int nr = over ? row : -1, nc = over ? col : -1;
+            if (nr != info.m_hover_row or nc != info.m_hover_col) {
+                info.m_hover_row = nr;
+                info.m_hover_col = nc;
+                glfwSetCursor(window, info.is_editable_cell(nr, nc) ? info.m_hand_cursor : NULL);
+                info.set_modified();
+            }
+        });
     }
 
     //! @brief Main cycle.
     void draw_cycle() {
         m_renderer.initializeContext(false);
+        m_hand_cursor = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
         setCallbacks();
         while (m_running) {
             if (m_modified) {
@@ -357,6 +429,7 @@ class info_window {
             }
             else std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
+        glfwDestroyCursor(m_hand_cursor);
         glfwMakeContextCurrent(NULL);
     }
 
@@ -371,17 +444,24 @@ class info_window {
             offs = 2;
         }
         for (size_t i=0; i<m_keys.size(); ++i) {
+            float yc = row_center_y(i);
+            bool row_hovered = (int)i == m_hover_row and m_hover_col >= 0;
+
             std::string s = m_keys[i];
+            std::string underline;
             for (size_t j=0; j<m_uid.size(); ++j) {
                 while (s.size() < m_keys[i].size() + m_spacing * j) s.push_back(' ');
-                if (m_values[i][j].size() >= m_spacing) {
-                    m_values[i][j].resize(m_spacing - 4);
-                    m_values[i][j] += "...";
+                std::string val = m_values[i][j];
+                if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
+                if (row_hovered and (int)j == m_hover_col) {
+                    while (underline.size() < s.size()) underline.push_back(' ');
+                    underline += std::string(val.size(), '_');
                 }
-                s += m_values[i][j];
+                s += val;
             }
-            float y = (1 - (i+offs+0.5f) / (m_keys.size()+offs)) * (m_renderer.getWindowHeight());
-            m_renderer.drawText(s, 0.16f, y, 0.25f);
+            m_renderer.drawText(s, 0.16f, yc, 0.25f);
+            if (not underline.empty())
+                m_renderer.drawText(underline, 0.16f, yc - 3.0f, 0.25f);
         }
     }
 
@@ -486,6 +566,15 @@ class info_window {
 
     //! @brief Whether the contents of the window have been modified.
     bool m_modified = false;
+
+    //! @brief The row of the table currently under the mouse pointer (-1 if none).
+    int m_hover_row = -1;
+
+    //! @brief Column (UID index) currently under the mouse cursor (-1 if none).
+    int m_hover_col = -1;
+
+    //! @brief “Hand” cursor, shown above an editable value.
+    GLFWcursor* m_hand_cursor = nullptr;
 
     //! @brief Rendering thread.
     std::thread m_thread;

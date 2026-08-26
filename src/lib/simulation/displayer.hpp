@@ -344,7 +344,7 @@ class info_window {
         float x0 = 0.16f;
         for (size_t j = 0; j < m_uid.size(); ++j) {
             float left = x0 + key_w + m_spacing * j * m_char_px;
-            std::string v = trimmed(m_values[row][j]);
+            std::string v = (m_editing and (int)row == m_edit_row and (int)j == m_edit_col) ? m_edit_buffer : trimmed(m_values[row][j]);
             float right = left + v.size() * m_char_px;
             if (x >= left and x < right) { col = (int)j; return true; }
         }
@@ -379,6 +379,39 @@ class info_window {
         return not trimmed(m_values[row][col]).empty();
     }
 
+    //! @brief Enter edit mode for the specified cell.
+    void begin_edit(int row, int col) {
+        if (not is_editable_cell(row, col)) return;
+        m_editing = true;
+        m_edit_row = row;
+        m_edit_col = col;
+        m_edit_buffer = trimmed(m_values[row][col]);
+        m_hover_row = m_hover_col = -1;
+        set_modified();
+    }
+
+    //! @brief Apply the change and exit edit mode.
+    void confirm_edit() {
+        on_edit_confirmed(m_edit_row, m_edit_col, m_edit_buffer);
+        m_editing = false;
+        m_edit_row = m_edit_col = -1;
+        set_modified();
+    }
+
+    //! @brief Discard the change without editing the original data.
+    void cancel_edit() {
+        m_editing = false;
+        m_edit_row = m_edit_col = -1;
+        m_edit_buffer.clear();
+        set_modified();
+    }
+
+    //! @brief Attachment point for the effective set on the node.
+    //! @note Function to be made.
+    void on_edit_confirmed(int row, int col, std::string const& value) {
+        (void)row; (void)col; (void)value;
+    }
+
     //! @brief It sets the window callbacks.
     void setCallbacks() {
         // Associates this (the info_window instance) to m_window
@@ -395,14 +428,43 @@ class info_window {
 
         // Keyboard callback
         glfwSetKeyCallback(m_renderer.getWindow(), [](GLFWwindow* window, int key, int scancode, int action, int mods) {
-            if (action == GLFW_PRESS and key == GLFW_KEY_ESCAPE) {
+            info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
+            if (action != GLFW_PRESS and action != GLFW_REPEAT) return;
+            if (info.m_editing) {
+                switch (key) {
+                    case GLFW_KEY_BACKSPACE:
+                        if (not info.m_edit_buffer.empty()) info.m_edit_buffer.pop_back();
+                        info.set_modified();
+                        break;
+                    case GLFW_KEY_ENTER:
+                    case GLFW_KEY_KP_ENTER:
+                        info.confirm_edit();
+                        break;
+                    case GLFW_KEY_ESCAPE:
+                        info.cancel_edit(); // Undoes the change; does NOT close the window
+                        break;
+                    default:
+                        break;
+                }
+                return;
+            }
+            if (key == GLFW_KEY_ESCAPE) {
                 glfwSetWindowShouldClose(window, GLFW_TRUE);
             }
         });
 
-        // Cursor callback
+        // Char callback (text entered during editing)
+        glfwSetCharCallback(m_renderer.getWindow(), [](GLFWwindow* window, unsigned int codepoint) {
+            info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
+            if (not info.m_editing or codepoint >= 128) return; // ASCII
+            info.m_edit_buffer.push_back((char)codepoint);
+            info.set_modified();
+        });
+
+        // Cursor position callback
         glfwSetCursorPosCallback(m_renderer.getWindow(), [](GLFWwindow* window, double xpos, double ypos) {
             info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
+            if (info.m_editing) return; // No hover effect while editing
             int row = -1, col = -1;
             bool over = info.point_to_cell(xpos, ypos, row, col);
             int nr = over ? row : -1, nc = over ? col : -1;
@@ -411,6 +473,15 @@ class info_window {
                 info.m_hover_col = nc;
                 glfwSetCursor(window, info.is_editable_cell(nr, nc) ? info.m_hand_cursor : NULL);
                 info.set_modified();
+            }
+        });
+
+        // Mouse click callback (enter edit mode)
+        glfwSetMouseButtonCallback(m_renderer.getWindow(), [](GLFWwindow* window, int button, int action, int mods) {
+            info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
+            if (button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_PRESS and not info.m_editing) {
+                if (info.m_hover_row >= 0 and info.m_hover_col >= 0)
+                    info.begin_edit(info.m_hover_row, info.m_hover_col);
             }
         });
     }
@@ -445,15 +516,17 @@ class info_window {
         }
         for (size_t i=0; i<m_keys.size(); ++i) {
             float yc = row_center_y(i);
-            bool row_hovered = (int)i == m_hover_row and m_hover_col >= 0;
+            bool row_hovered = not m_editing and (int)i == m_hover_row and m_hover_col >= 0;
+            bool row_editing = m_editing and (int)i == m_edit_row;
 
             std::string s = m_keys[i];
             std::string underline;
             for (size_t j=0; j<m_uid.size(); ++j) {
                 while (s.size() < m_keys[i].size() + m_spacing * j) s.push_back(' ');
-                std::string val = m_values[i][j];
+                bool this_editing = row_editing and (int)j == m_edit_col;
+                std::string val = this_editing ? (m_edit_buffer + "_") : m_values[i][j];
                 if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
-                if (row_hovered and (int)j == m_hover_col) {
+                if ((row_hovered and (int)j == m_hover_col) or this_editing) {
                     while (underline.size() < s.size()) underline.push_back(' ');
                     underline += std::string(val.size(), '_');
                 }
@@ -572,6 +645,18 @@ class info_window {
 
     //! @brief Column (UID index) currently under the mouse cursor (-1 if none).
     int m_hover_col = -1;
+
+    //! @brief If a cell is currently being edited.
+    bool m_editing = false;
+
+    //! @brief Row number of the cell being edited (-1 if none).
+    int m_edit_row = -1;
+    
+    //! @brief Column of the cell being edited (-1 if none).
+    int m_edit_col = -1;
+
+    //! @brief Local buffer containing the value currently being modified.
+    std::string m_edit_buffer;
 
     //! @brief “Hand” cursor, shown above an editable value.
     GLFWcursor* m_hand_cursor = nullptr;

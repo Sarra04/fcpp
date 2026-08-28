@@ -345,7 +345,8 @@ class info_window {
         for (size_t j = 0; j < m_uid.size(); ++j) {
             float left = x0 + key_w + m_spacing * j * m_char_px;
             std::string v = (m_editing and (int)row == m_edit_row and (int)j == m_edit_col) ? m_edit_buffer : trimmed(m_values[row][j]);
-            float right = left + v.size() * m_char_px;
+            size_t display_len = v.size() >= (size_t)m_spacing ? (size_t)m_spacing - 1 : v.size();
+            float right = left + display_len * m_char_px;
             if (x >= left and x < right) { col = (int)j; return true; }
         }
         return false;

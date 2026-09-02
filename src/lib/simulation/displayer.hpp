@@ -341,7 +341,7 @@ class info_window {
     static constexpr float m_char_px = 7.0f;
     bool column_at(size_t row, float x, int& col) const {
         float key_w = m_keys.empty() ? 0.f : m_keys[0].size() * m_char_px;
-        float x0 = 0.16f;
+        float x0 = 0.16f; // must match drawText's x in draw()
         if (x < x0) return false;
         if (x < x0 + key_w) { 
             col = -2; // -2 indicates that we are hovering over a label
@@ -349,7 +349,9 @@ class info_window {
         }
         for (size_t j = 0; j < m_uid.size(); ++j) {
             float left = x0 + key_w + m_spacing * j * m_char_px;
+            // use the live buffer, not the stale value, for the cell being edited
             std::string v = (m_editing and (int)row == m_edit_row and (int)j == m_edit_col) ? m_edit_buffer : trimmed(m_values[row][j]);
+            // mirror draw()'s truncation so the hit-box matches what's shown
             size_t display_len = v.size() >= (size_t)m_spacing ? (size_t)m_spacing - 1 : v.size();
             float right = left + display_len * m_char_px;
             if (x >= left and x < right) { col = (int)j; return true; }
@@ -360,7 +362,7 @@ class info_window {
     //! @brief From mouse coordinates (GLFW, y down) to (row, column) in the table.
     bool point_to_cell(double mx, double my, int& row, int& col) {
         float H = (float)m_renderer.getWindowHeight();
-        float y_up = H - (float)my;
+        float y_up = H - (float)my; // GLFW is y-down, drawText is y-up
         float half_h = H / (2.0f * (m_keys.size() + header_rows()));
         for (size_t i = 0; i < m_keys.size(); ++i) {
             if (not is_data_row(i)) continue;
@@ -379,10 +381,10 @@ class info_window {
         return a == std::string::npos ? "" : s.substr(a, b-a+1);
     }
 
-    //! @brief Check that the cell is not empty.
+    //! @brief Whether (row, col) can be clicked to start editing.
     bool is_editable_cell(int row, int col) {
         if (row < 0) return false;
-        if (col == -2) {
+        if (col == -2) { // property name: editable if any node has a value
             for (size_t j = 0; j < m_uid.size(); ++j)
                 if (not trimmed(m_values[row][j]).empty()) return true;
             return false;
@@ -544,7 +546,7 @@ class info_window {
             for (size_t j=0; j<m_uid.size(); ++j) {
                 while (s.size() < m_keys[i].size() + m_spacing * j) s.push_back(' ');
                 bool this_editing = row_editing and (int)j == m_edit_col;
-                std::string val = this_editing ? (m_edit_buffer + "_") : m_values[i][j];
+                std::string val = this_editing ? (m_edit_buffer + "_") : m_values[i][j]; // "_" as a caret while editing
                 if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
                 bool val_underlined = row_hovered_label or (row_hovered_value and (int)j == m_hover_col) or this_editing;
                 if (val_underlined) {

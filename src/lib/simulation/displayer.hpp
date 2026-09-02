@@ -342,6 +342,11 @@ class info_window {
     bool column_at(size_t row, float x, int& col) const {
         float key_w = m_keys.empty() ? 0.f : m_keys[0].size() * m_char_px;
         float x0 = 0.16f;
+        if (x < x0) return false;
+        if (x < x0 + key_w) { 
+            col = -2; // -2 indicates that we are hovering over a label
+            return true; 
+        }
         for (size_t j = 0; j < m_uid.size(); ++j) {
             float left = x0 + key_w + m_spacing * j * m_char_px;
             std::string v = (m_editing and (int)row == m_edit_row and (int)j == m_edit_col) ? m_edit_buffer : trimmed(m_values[row][j]);
@@ -376,7 +381,13 @@ class info_window {
 
     //! @brief Check that the cell is not empty.
     bool is_editable_cell(int row, int col) {
-        if (row < 0 or col < 0) return false;
+        if (row < 0) return false;
+        if (col == -2) {
+            for (size_t j = 0; j < m_uid.size(); ++j)
+                if (not trimmed(m_values[row][j]).empty()) return true;
+            return false;
+        }
+        if (col < 0) return false;
         return not trimmed(m_values[row][col]).empty();
     }
 
@@ -517,17 +528,26 @@ class info_window {
         }
         for (size_t i=0; i<m_keys.size(); ++i) {
             float yc = row_center_y(i);
-            bool row_hovered = not m_editing and (int)i == m_hover_row and m_hover_col >= 0;
+            bool row_hovered_label = not m_editing and (int)i == m_hover_row and m_hover_col == -2;
+            bool row_hovered_value = not m_editing and (int)i == m_hover_row and m_hover_col >= 0;
             bool row_editing = m_editing and (int)i == m_edit_row;
+            bool label_active = row_hovered_label or row_hovered_value or row_editing;
 
             std::string s = m_keys[i];
             std::string underline;
+            if (label_active) {
+                std::string name = trimmed(m_keys[i]);
+                underline = std::string(name.size(), '_');
+                while (underline.size() < s.size()) underline.push_back(' ');
+            }
+
             for (size_t j=0; j<m_uid.size(); ++j) {
                 while (s.size() < m_keys[i].size() + m_spacing * j) s.push_back(' ');
                 bool this_editing = row_editing and (int)j == m_edit_col;
                 std::string val = this_editing ? (m_edit_buffer + "_") : m_values[i][j];
                 if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
-                if ((row_hovered and (int)j == m_hover_col) or this_editing) {
+                bool val_underlined = row_hovered_label or (row_hovered_value and (int)j == m_hover_col) or this_editing;
+                if (val_underlined) {
                     while (underline.size() < s.size()) underline.push_back(' ');
                     underline += std::string(val.size(), '_');
                 }

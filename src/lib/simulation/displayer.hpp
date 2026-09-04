@@ -404,9 +404,25 @@ class info_window {
         set_modified();
     }
 
+    //! @brief Enter edit mode for all nodes on the specified property.
+    void begin_edit_all(int row) {
+        if (not is_editable_cell(row, -2)) return;
+        m_editing = true;
+        m_edit_row = row;
+        m_edit_col = -2;
+        m_edit_buffer = trimmed(m_values[row][0]); // starts with the value of the first node
+        m_hover_row = m_hover_col = -1;
+        set_modified();
+    }
+
     //! @brief Apply the change and exit edit mode.
     void confirm_edit() {
-        on_edit_confirmed(m_edit_row, m_edit_col, m_edit_buffer);
+        if (m_edit_col == -2) {
+            for (size_t j = 0; j < m_uid.size(); ++j)
+                on_edit_confirmed(m_edit_row, (int)j, m_edit_buffer); // same value for each node
+        } else {
+            on_edit_confirmed(m_edit_row, m_edit_col, m_edit_buffer);
+        }
         m_editing = false;
         m_edit_row = m_edit_col = -1;
         set_modified();
@@ -494,8 +510,9 @@ class info_window {
         glfwSetMouseButtonCallback(m_renderer.getWindow(), [](GLFWwindow* window, int button, int action, int mods) {
             info_window& info = *((info_window*)glfwGetWindowUserPointer(window));
             if (button == GLFW_MOUSE_BUTTON_LEFT and action == GLFW_PRESS and not info.m_editing) {
-                if (info.m_hover_row >= 0 and info.m_hover_col >= 0)
-                    info.begin_edit(info.m_hover_row, info.m_hover_col);
+                if (info.m_hover_row < 0) return;
+                if (info.m_hover_col == -2) info.begin_edit_all(info.m_hover_row);
+                else if (info.m_hover_col >= 0) info.begin_edit(info.m_hover_row, info.m_hover_col);
             }
         });
     }
@@ -533,6 +550,7 @@ class info_window {
             bool row_hovered_label = not m_editing and (int)i == m_hover_row and m_hover_col == -2;
             bool row_hovered_value = not m_editing and (int)i == m_hover_row and m_hover_col >= 0;
             bool row_editing = m_editing and (int)i == m_edit_row;
+            bool editing_all = row_editing and m_edit_col == -2;
             bool label_active = row_hovered_label or row_hovered_value or row_editing;
 
             std::string s = m_keys[i];
@@ -545,9 +563,14 @@ class info_window {
 
             for (size_t j=0; j<m_uid.size(); ++j) {
                 while (s.size() < m_keys[i].size() + m_spacing * j) s.push_back(' ');
-                bool this_editing = row_editing and (int)j == m_edit_col;
-                std::string val = this_editing ? (m_edit_buffer + "_") : m_values[i][j]; // "_" as a caret while editing
-                if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
+                bool this_editing = row_editing and ((int)j == m_edit_col or editing_all);
+                std::string val;
+                if (editing_all) {
+                    val = (j == 0) ? (m_edit_buffer + "_") : ""; // other nodes that are currently empty
+                } else {
+                    val = this_editing ? (m_edit_buffer + "_") : m_values[i][j]; // "_" as a caret while editing
+                    if (val.size() >= m_spacing) { val.resize(m_spacing - 4); val += "..."; }
+                }
                 bool val_underlined = row_hovered_label or (row_hovered_value and (int)j == m_hover_col) or this_editing;
                 if (val_underlined) {
                     while (underline.size() < s.size()) underline.push_back(' ');

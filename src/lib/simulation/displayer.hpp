@@ -217,6 +217,7 @@ class info_window {
         using U = std::decay_t<decltype(m_net.node_at(0).storage_tuple())>;
         init_storage_values(m_keys, (typename U::tags){});
         init_storage_values(m_types, (typename U::types){});
+        init_editable_values(m_editable, (typename U::types){});
         std::vector<std::string> vk{
             "",
             "previous_time",
@@ -383,7 +384,7 @@ class info_window {
 
     //! @brief Whether (row, col) can be clicked to start editing.
     bool is_editable_cell(int row, int col) {
-        if (row < 0) return false;
+        if (row < 0 or row >= (int)m_editable.size() or not m_editable[row]) return false;
         if (col == -2) { // property name: editable if any node has a value
             for (size_t j = 0; j < m_uid.size(); ++j)
                 if (not trimmed(m_values[row][j]).empty()) return true;
@@ -437,9 +438,15 @@ class info_window {
     }
 
     //! @brief Attachment point for the effective set on the node.
-    //! @note Function to be made.
     void on_edit_confirmed(int row, int col, std::string const& value) {
-        (void)row; (void)col; (void)value;
+        if (row < 0 or row >= (int)m_editable.size() or not m_editable[row]) return;
+        if (col < 0 or col >= (int)m_uid.size()) return;
+        device_t uid = m_uid[col];
+        if (not m_net.node_count(uid)) return;
+        typename net::lock_type l;
+        node& n = m_net.node_at(uid, l);
+        read(row, value, n.storage_tuple());
+        update_values(n);
     }
 
     //! @brief It sets the window callbacks.
@@ -497,7 +504,8 @@ class info_window {
             if (info.m_editing) return; // No hover effect while editing
             int row = -1, col = -1;
             bool over = info.point_to_cell(xpos, ypos, row, col);
-            int nr = over ? row : -1, nc = over ? col : -1;
+            bool editable = over and info.is_editable_cell(row, col);
+            int nr = editable ? row : -1, nc = editable ? col : -1;
             if (nr != info.m_hover_row or nc != info.m_hover_col) {
                 info.m_hover_row = nr;
                 info.m_hover_col = nc;
@@ -590,6 +598,28 @@ class info_window {
     inline void init_storage_values(std::vector<std::string>& v, common::type_sequence<S, Ss...>) {
         v.push_back(common::strip_namespaces(common::type_name<S>()));
         init_storage_values(v, common::type_sequence<Ss...>{});
+    }
+
+    //! @brief Fills m_editable: whether each storage field's type can be parsed back from a string.
+    inline void init_editable_values(std::vector<bool>&, common::type_sequence<>) {}
+    template <typename S, typename... Ss>
+    inline void init_editable_values(std::vector<bool>& v, common::type_sequence<S, Ss...>) {
+        v.push_back(has_from_string<S>);
+        init_editable_values(v, common::type_sequence<Ss...>{});
+    }
+
+    //! @brief Writes value into the row-th field of a tagged tuple's storage.
+    template <typename T>
+    inline void read(int row, common::type_sequence<>, std::string const&, T&) {}
+    template <typename S, typename... Ss, typename T>
+    inline void read(int row, common::type_sequence<S, Ss...>, std::string const& value, T& t) {
+        if (row == 0) from_string(value, common::get<S>(t));
+        else read(row-1, common::type_sequence<Ss...>{}, value, t);
+    }
+    //! @brief Entry point: writes value into the row-th field of the given tagged tuple.
+    template <typename S, typename T>
+    void read(int row, std::string const& value, common::tagged_tuple<S,T>& t) {
+        read(row, S{}, value, t);
     }
 
     //! @brief Compile-time check whether type T is convertible to string (base case).
@@ -718,6 +748,9 @@ class info_window {
 
     //! @brief Types of the values represented.
     std::vector<std::string> m_types;
+
+    //! @brief For each storage field (same order as m_types).
+    std::vector<bool> m_editable;
 };
 
 

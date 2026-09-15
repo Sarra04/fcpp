@@ -1256,7 +1256,7 @@ struct displayer {
                     PROFILE_COUNT("displayer");
                     if (not m_legenda) {
                         PROFILE_COUNT("displayer/nodes");
-                        if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity()) highlightHoveredNode();
+                        if (m_pointer && m_mouseStartX == std::numeric_limits<float>::infinity() and not m_dragging) highlightHoveredNode();
                         common::parallel_for(common::tags::general_execution<parallel>(m_threads), n_end-n_beg, [&] (size_t i, size_t) {
                             viewport_update(n_beg[i].second.cache_position(t));
                         });
@@ -1323,6 +1323,9 @@ struct displayer {
                                 {"G",           "show/hide the reference grid and node pins"},
                                 {"M",           "enable/disable the marker for selecting nodes"},
                                 {"left-click",  "open a window with selected node details"},
+                                {"left-drag",   "select a group of nodes to open their details together"},
+                                {"alt+click",   "drag a highlighted node (or group) to move it"},
+                                {"alt+drag",    "select a group of nodes without opening their info"},
                                 {"C",           "resets the camera to the starting position"},
                                 {"A/D",         "move the camera left/right"},
                                 {"W/S",         "move the camera up/down"},
@@ -1549,7 +1552,7 @@ struct displayer {
                 auto beg{ P::net::node_begin() };
                 auto end{ P::net::node_end() };
                 float minDist{ (float)INF };
-                if (P::net::node_count(m_hoveredNode) and P::net::node_at(m_hoveredNode).get_highlight() == 1) {
+                if (P::net::node_count(m_hoveredNode) and P::net::node_at(m_hoveredNode).get_highlight() == 1 and m_selected_nodes.find(m_hoveredNode) == m_selected_nodes.end()) {
                     typename P::net::lock_type l;
                     P::net::node_at(m_hoveredNode, l).highlight(0);
                 }
@@ -1568,6 +1571,67 @@ struct displayer {
                     typename P::net::lock_type l;
                     P::net::node_at(m_hoveredNode, l).highlight(1);
                 }
+            }
+
+            //! @brief Converts a mouse displacement (raw screen pixels, y growing downward) into
+            //! a world-space displacement, at the camera's current focus distance.
+            glm::vec3 mouseToWorld(glm::vec2 mouseDelta) {
+                auto const& cam = m_renderer.getCamera();
+                glm::mat4 const inverseView = glm::affineInverse(cam.getView());
+                glm::vec3 const right = glm::vec3{inverseView[0]};
+                glm::vec3 const up = glm::vec3{inverseView[1]};
+                float const fovY = 2.0f * std::atan(1.0f / cam.getPerspective()[1][1]);
+                float const worldHeight = 2.0f * cam.getDepth() * std::tan(fovY / 2.0f);
+                float const worldPerPixel = worldHeight / (float)m_renderer.getFramebufferHeight();
+                return worldPerPixel * (mouseDelta.x * right - mouseDelta.y * up);
+            }
+
+            //! @brief Starts dragging every currently-highlighted node.
+            void beginDrag() {
+                m_dragged_nodes.clear();
+                auto beg{ P::net::node_begin() };
+                auto end{ P::net::node_end() };
+                for (size_t i = 0; i < end - beg; ++i)
+                    if (beg[i].second.get_highlight() == 1) m_dragged_nodes.push_back(beg[i].second.uid);
+                if (not m_dragged_nodes.empty()) {
+                    m_dragging = true;
+                    // disables the OS cursor so drag deltas keep arriving even when the
+                    // pointer passes over another window (e.g. an open info_window)
+                    glfwSetInputMode(m_renderer.getWindow(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+                }
+            }
+
+            //! @brief Ends the current drag and switches off highlight on every dragged/selected node.
+            void endDrag() {
+                m_dragging = false;
+                for (device_t uid : m_dragged_nodes) {
+                    if (not P::net::node_count(uid)) continue;
+                    typename P::net::lock_type l;
+                    P::net::node_at(uid, l).highlight(0);
+                }
+                m_dragged_nodes.clear();
+                m_selected_nodes.clear();
+                glfwSetInputMode(m_renderer.getWindow(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
+
+            //! @brief Applies one frame's worth of mouse movement to every dragged node.
+            void updateDrag(float xoffset, float yoffset) {
+                glm::vec3 worldDelta = mouseToWorld(glm::vec2(xoffset, -yoffset));
+                for (device_t uid : m_dragged_nodes) {
+                    if (not P::net::node_count(uid)) continue;
+                    typename P::net::lock_type l;
+                    node& n = P::net::node_at(uid, l);
+                    glm::vec3 base = details::vec_to_glm(n.position(), 0.0f);
+                    on_node_dragged(uid, base + worldDelta);
+                }
+            }
+
+            //! @brief Applies the dragged node's new position (Alt+click drag).
+            void on_node_dragged(device_t uid, glm::vec3 const& new_pos) {
+                if (not P::net::node_count(uid)) return;
+                typename P::net::lock_type l;
+                node& n = P::net::node_at(uid, l);
+                n.position() = { real_t(new_pos.x), real_t(new_pos.y), real_t(new_pos.z) };
             }
 
             inline bool pointInsideRectangle(float x, float y) {
@@ -1616,15 +1680,31 @@ struct displayer {
 
                     case mouse_type::click: {
                         GLFWwindow* window{ m_renderer.getWindow() };
+
+                        if (m_dragging) {
+                            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) endDrag();
+                            m_renderer.mouseInput(x, y, 0.0f, 0.0f, mouse_type::click, mods);
+                            break;
+                        }
+
                         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
-                            if (P::net::node_count(m_hoveredNode) and P::net::node_at(m_hoveredNode).get_highlight() == 1) {
+                            if ((mods & GLFW_MOD_ALT) and P::net::node_count(m_hoveredNode) and P::net::node_at(m_hoveredNode).get_highlight() == 1) {
+                                beginDrag();
+                            }
+                            else if (P::net::node_count(m_hoveredNode) and P::net::node_at(m_hoveredNode).get_highlight() == 1) {
                                 glfwMakeContextCurrent(NULL);
-                                m_info.emplace_back(new info_window<F>(*this, {m_hoveredNode}));
+                                if (m_selected_nodes.find(m_hoveredNode) != m_selected_nodes.end()) {
+                                    std::vector<device_t> nodes(m_selected_nodes.begin(), m_selected_nodes.end());
+                                    m_info.emplace_back(new info_window<F>(*this, nodes));
+                                } else {
+                                    m_info.emplace_back(new info_window<F>(*this, {m_hoveredNode}));
+                                }
                                 glfwMakeContextCurrent(m_renderer.getWindow());
                             }
                             else if (m_mouseStartX == std::numeric_limits<float>::infinity()) {
                                 m_mouseStartX = x;
                                 m_mouseStartY = y;
+                                m_selected_nodes.clear();
                             }
                         }
                         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE and m_mouseStartX != std::numeric_limits<float>::infinity()) {
@@ -1638,10 +1718,14 @@ struct displayer {
                                     nodes.emplace_back(node);
                                 }
                             }
-                            if (nodes.size() > 0) {
+                            if (nodes.size() > 0 and not (mods & GLFW_MOD_ALT)) {
                                 glfwMakeContextCurrent(NULL);
                                 m_info.emplace_back(new info_window<F>(*this, nodes));
                                 glfwMakeContextCurrent(m_renderer.getWindow());
+                            }
+                            else if (mods & GLFW_MOD_ALT) {
+                                m_selected_nodes.clear();
+                                m_selected_nodes.insert(nodes.begin(), nodes.end());
                             }
                             m_mouseStartX = std::numeric_limits<float>::infinity();
                             m_mouseStartY = std::numeric_limits<float>::infinity();
@@ -1652,6 +1736,10 @@ struct displayer {
 
 
                     case mouse_type::drag: {
+                        if (m_dragging) {
+                            updateDrag((float)x, (float)y);
+                            break; // No camera rotation while dragging nodes
+                        }
                         GLFWwindow* window{ m_renderer.getWindow() };
                         if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
                             if (!m_mouseRight) {
@@ -1863,6 +1951,16 @@ struct displayer {
 
             //! @brief The node currently hovered by the cursor.
             device_t m_hoveredNode;
+
+            //! @brief Whether a drag (Alt+click) is currently in progress.
+            bool m_dragging = false;
+
+            //! @brief The currently-highlighted nodes being dragged together.
+            std::vector<device_t> m_dragged_nodes;
+
+            //! @brief Nodes selected via a rectangle (with Alt held), immune to being
+            //! un-highlighted by mere mouse hover, kept persistent until a new selection starts.
+            std::unordered_set<device_t> m_selected_nodes;
 
             //! @brief List of currently stroked keys.
             std::unordered_set<int> m_key_stroked;
